@@ -1,5 +1,5 @@
 {
-  "name": "todo-frontend-backend",
+  "name": "todo-backend",
   "version": "1.0.0",
   "description": "Backend API for Todo AI App with task breakdown and learning tracking",
   "type": "module",
