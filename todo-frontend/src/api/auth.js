@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_URL = "http://192.168.1.13:3000/api/auth";
+const API_URL = `${process.env.EXPO_PUBLIC_API_URL}/api/auth`;
+
 
 
 
