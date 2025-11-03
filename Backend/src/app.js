@@ -10,43 +10,53 @@ import { startFailTracker } from './jobs/failTracker.js';
 
 dotenv.config();
 
-// Connect to MongoDB (optional for now - routes will work without it for testing)
+// ✅ Connect to MongoDB
 if (process.env.MONGODB_URI) {
   mongoose
-    .connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    })
-    .then(() => console.log('MongoDB connected'))
-    .catch((err) => console.error('MongoDB connection error:', err));
+    .connect(process.env.MONGODB_URI)
+    .then(() => console.log('✅ MongoDB connected'))
+    .catch((err) => console.error('❌ MongoDB connection error:', err));
 } else {
-  console.log('No MongoDB URI provided - running without database connection');
+  console.log('⚠️ No MongoDB URI provided - running without database connection');
 }
 
 const app = express();
 
-// Middleware
+// ✅ Fix CORS for Expo + Render
 app.use(cors({
-  origin: true, // Allow all origins for development
-  credentials: true
+  origin: [
+    'http://localhost:8081',                 // for Expo local dev
+    'http://localhost:3000',                 // for web dev (if any)
+    'https://todo-backend-83q7.onrender.com', // backend itself
+    'exp://localhost:8081',                  // Expo Go local
+    'https://expo.dev',                      // Expo production
+    '*',                                     // fallback (allow all)
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// ✅ Parse JSON bodies
 app.use(express.json());
 
-// Routes
+// ✅ Routes
 app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/accountability', accountabilityRoutes);
 
-// Start background jobs
+// ✅ Background jobs
 startFailTracker();
 
-// Error handling middleware
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
+// ✅ Health check for Render
+app.get('/', (req, res) => {
+  res.send('🚀 Todo AI Backend running successfully!');
 });
 
+// ✅ Error handling
+app.use((err, req, res, next) => {
+  console.error('❌ Server error:', err.stack);
+  res.status(500).json({ error: 'Something went wrong!' });
+});
 
 export default app;
