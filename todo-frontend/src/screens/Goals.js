@@ -3,6 +3,7 @@ import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '../api/auth';
 
 export default function Goals() {
   const [title, setTitle] = useState('');
@@ -17,7 +18,7 @@ export default function Goals() {
 
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await axios.post('https://todo-backend-83q7.onrender.com/api/tasks', {
+      const response = await axios.post(`${BASE_URL}/tasks`, {
         title: title.trim(),
         description: description.trim(),
         energyLevel,

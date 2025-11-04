@@ -4,6 +4,7 @@ import Slider from '@react-native-community/slider';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthContext } from '../context/AuthContext';
+import { BASE_URL } from '../api/auth';
 
 export default function Dashboard({ navigation }) {
   const [energy, setEnergy] = useState(5);
@@ -18,7 +19,7 @@ export default function Dashboard({ navigation }) {
   const fetchPlan = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await axios.get(`http://192.168.1.13:3000/api/tasks/today?energy=${energy}`, {
+      const response = await axios.get(`${BASE_URL}/tasks/today?energy=${energy}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTasks(response.data.tasks);
@@ -31,7 +32,7 @@ export default function Dashboard({ navigation }) {
   const updateTaskStatus = async (taskId, newStatus) => {
     try {
       const token = await AsyncStorage.getItem('token');
-      await axios.put(`http://192.168.1.13:3000/api/tasks/${taskId}`, {
+      await axios.put(`${BASE_URL}/tasks/${taskId}`, {
         status: newStatus,
       }, {
         headers: { Authorization: `Bearer ${token}` },
@@ -56,7 +57,7 @@ export default function Dashboard({ navigation }) {
           onPress: async () => {
             try {
               const token = await AsyncStorage.getItem('token');
-              await axios.delete(`http://192.168.1.13:3000/api/tasks/${taskId}`, {
+              await axios.delete(`${BASE_URL}/tasks/${taskId}`, {
                 headers: { Authorization: `Bearer ${token}` },
               });
               // Refresh tasks
