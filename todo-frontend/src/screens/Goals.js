@@ -18,7 +18,7 @@ export default function Goals() {
 
     try {
       const token = await AsyncStorage.getItem('token');
-      console.log('Token:', token);
+      // console.log('Token:', token);
       const response = await axios.post(`${BASE_URL}/tasks`, {
         title: title.trim(),
         description: description.trim(),
