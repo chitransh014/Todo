@@ -1,52 +1,96 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, FlatList } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, Picker } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Goals() {
   const [title, setTitle] = useState('');
-  const [subtasks, setSubtasks] = useState([]);
-
-const handleBreakdown = async () => {
-  try {
-    const token = await AsyncStorage.getItem('token');
-    const response = await axios.post('http://localhost:3000/api/tasks/breakdown', { title }, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    setSubtasks(response.data.subtasks);
-  } catch (error) {
-    alert('Failed to generate breakdown');
-  }
-};
+  const [description, setDescription] = useState('');
+  const [energyLevel, setEnergyLevel] = useState('medium');
 
   const handleSave = async () => {
+    if (!title.trim()) {
+      alert('Please enter a task title');
+      return;
+    }
+
     try {
       const token = await AsyncStorage.getItem('token');
-      await axios.post('http://localhost:3000/api/tasks', { title, subtasks }, {
+      const response = await axios.post('http://localhost:3000/api/tasks', {
+        title: title.trim(),
+        description: description.trim(),
+        energyLevel,
+      }, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      alert('Task saved');
+      alert('Task added successfully');
+      setTitle('');
+      setDescription('');
+      setEnergyLevel('medium');
     } catch (error) {
-      alert('Failed to save task');
+      console.error('Save task error:', error);
+      alert('Failed to add task');
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text>Add Task</Text>
-      <TextInput placeholder="Task Title" value={title} onChangeText={setTitle} style={styles.input} />
-      <Button title="AI Breakdown" onPress={handleBreakdown} />
-      <FlatList
-        data={subtasks}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => <Text>{item}</Text>}
+      <Text style={styles.title}>Add Task</Text>
+
+      <TextInput
+        placeholder="Task Title"
+        value={title}
+        onChangeText={setTitle}
+        style={styles.input}
       />
-      <Button title="Save Task" onPress={handleSave} />
+
+      <TextInput
+        placeholder="Task Description (optional)"
+        value={description}
+        onChangeText={setDescription}
+        style={[styles.input, styles.textArea]}
+        multiline
+        numberOfLines={3}
+      />
+
+      <Text style={styles.label}>Energy Level:</Text>
+      <View style={styles.pickerContainer}>
+        <Picker
+          selectedValue={energyLevel}
+          onValueChange={(itemValue) => setEnergyLevel(itemValue)}
+          style={styles.picker}
+        >
+          <Picker.Item label="Low" value="low" />
+          <Picker.Item label="Medium" value="medium" />
+          <Picker.Item label="High" value="high" />
+        </Picker>
+      </View>
+
+      <Button title="Add Task" onPress={handleSave} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
-  input: { borderWidth: 1, padding: 10, marginVertical: 10 },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 10,
+    marginVertical: 10,
+    borderRadius: 5,
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  label: { fontSize: 16, marginVertical: 10 },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    marginVertical: 10,
+  },
+  picker: { height: 50 },
 });

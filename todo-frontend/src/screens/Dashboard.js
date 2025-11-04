@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, Button, StyleSheet, FlatList } from 'react-native';
+import { View, Text, Button, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import Slider from '@react-native-community/slider';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -15,44 +15,156 @@ export default function Dashboard({ navigation }) {
     fetchPlan();
   }, [energy]);
 
-const fetchPlan = async () => {
-  try {
-    const token = await AsyncStorage.getItem('token');
-    const response = await axios.get(`http://localhost:3000/api/tasks/today?energy=${energy}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    setTasks(response.data.tasks);
-    setName(response.data.name);
-  } catch (error) {
-    console.error(error);
-  }
-};
+  const fetchPlan = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const response = await axios.get(`http://localhost:3000/api/tasks/today?energy=${energy}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTasks(response.data.tasks);
+      setName(response.data.name);
+    } catch (error) {
+      console.error('Fetch plan error:', error);
+    }
+  };
+
+  const updateTaskStatus = async (taskId, newStatus) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await axios.put(`http://localhost:3000/api/tasks/${taskId}`, {
+        status: newStatus,
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      // Refresh tasks
+      fetchPlan();
+    } catch (error) {
+      console.error('Update task error:', error);
+      Alert.alert('Error', 'Failed to update task');
+    }
+  };
+
+  const deleteTask = async (taskId) => {
+    Alert.alert(
+      'Delete Task',
+      'Are you sure you want to delete this task?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('token');
+              await axios.delete(`http://localhost:3000/api/tasks/${taskId}`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              // Refresh tasks
+              fetchPlan();
+            } catch (error) {
+              console.error('Delete task error:', error);
+              Alert.alert('Error', 'Failed to delete task');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const renderTask = ({ item }) => (
+    <View style={styles.taskItem}>
+      <View style={styles.taskContent}>
+        <Text style={styles.taskTitle}>{item.title}</Text>
+        {item.description && (
+          <Text style={styles.taskDescription}>{item.description}</Text>
+        )}
+        <Text style={styles.taskMeta}>
+          Priority: {item.priority} | Energy: {item.energyLevel}
+        </Text>
+      </View>
+      <View style={styles.taskActions}>
+        {item.status !== 'completed' && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.completeButton]}
+            onPress={() => updateTaskStatus(item.id, 'completed')}
+          >
+            <Text style={styles.buttonText}>Complete</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={[styles.actionButton, styles.deleteButton]}
+          onPress={() => deleteTask(item.id)}
+        >
+          <Text style={styles.buttonText}>Delete</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
-      <Text>Hi, {name}</Text>
-      <Text>Energy Level</Text>
+      <Text style={styles.greeting}>Hi, {name}</Text>
+
+      <Text style={styles.energyLabel}>Energy Level: {energy}</Text>
       <Slider
         minimumValue={1}
         maximumValue={10}
         step={1}
         value={energy}
         onValueChange={setEnergy}
+        style={styles.slider}
       />
+
+      <Text style={styles.sectionTitle}>Today's Tasks</Text>
       <FlatList
         data={tasks}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <Text>{item.title}</Text>}
+        renderItem={renderTask}
+        ListEmptyComponent={<Text style={styles.emptyText}>No tasks for today. Adjust your energy level or add new tasks!</Text>}
       />
-      <Button title="Add Task" onPress={() => navigation.navigate('AddTask')} />
-      <Button title="Logout" onPress={() => {
-        logout();
-        navigation.navigate('Login');
-      }} />
+
+      <View style={styles.buttonContainer}>
+        <Button title="Add Task" onPress={() => navigation.navigate('Goals')} />
+        <Button
+          title="Logout"
+          onPress={() => {
+            logout();
+            navigation.navigate('Login');
+          }}
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
+  greeting: { fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
+  energyLabel: { fontSize: 16, marginBottom: 10 },
+  slider: { marginBottom: 20 },
+  sectionTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
+  taskItem: {
+    backgroundColor: '#f9f9f9',
+    padding: 15,
+    marginVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  taskContent: { flex: 1 },
+  taskTitle: { fontSize: 18, fontWeight: 'bold' },
+  taskDescription: { fontSize: 14, color: '#666', marginTop: 5 },
+  taskMeta: { fontSize: 12, color: '#888', marginTop: 5 },
+  taskActions: { flexDirection: 'row', marginTop: 10 },
+  actionButton: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 5,
+    marginLeft: 10,
+  },
+  completeButton: { backgroundColor: '#4CAF50' },
+  deleteButton: { backgroundColor: '#f44336' },
+  buttonText: { color: 'white', fontSize: 12 },
+  emptyText: { textAlign: 'center', fontStyle: 'italic', color: '#666', marginTop: 20 },
+  buttonContainer: { marginTop: 20, gap: 10 },
 });

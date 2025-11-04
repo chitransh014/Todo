@@ -28,3 +28,13 @@
 - [ ] Test the app with backend
 - [ ] Add offline storage for tasks
 - [ ] Implement push notifications
+
+## Task Management Implementation
+- [x] Add GET /api/tasks endpoint (list all tasks for user)
+- [x] Add POST /api/tasks endpoint (add single task)
+- [x] Add PUT /api/tasks/:id endpoint (update task)
+- [x] Add DELETE /api/tasks/:id endpoint (delete task)
+- [x] Add GET /api/tasks/today endpoint (daily plan based on energy)
+- [x] Update Goals.js to use POST /api/tasks for adding tasks
+- [x] Update Dashboard.js to fetch from GET /api/tasks/today and add update/delete UI
+- [x] Update TODO.md to mark task management as completed
