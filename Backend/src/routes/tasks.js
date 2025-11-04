@@ -174,7 +174,8 @@ router.post('/', authenticateToken, async (req, res) => {
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
     }
-
+      console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
     const { title, description, dueDate, energyLevel } = value;
     const userId = req.user._id;
 
