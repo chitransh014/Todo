@@ -17,7 +17,7 @@ export default function Goals() {
 
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await axios.post('http://192.168.1.13:3000/api/tasks', {
+      const response = await axios.post('https://todo-backend-83q7.onrender.com/api/tasks', {
         title: title.trim(),
         description: description.trim(),
         energyLevel,

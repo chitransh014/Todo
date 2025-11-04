@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_URL = `${process.env.EXPO_PUBLIC_API_URL}/api/auth`;
+const API_URL = "https://todo-backend-83q7.onrender.com/api/auth";
+
 
 
 

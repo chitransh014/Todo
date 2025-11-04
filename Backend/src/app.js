@@ -23,19 +23,27 @@ if (process.env.MONGODB_URI) {
 const app = express();
 
 // ✅ Fix CORS for Expo + Render
-app.use(cors({
-  origin: [
-    'http://localhost:8081',                 // for Expo local dev
-    'http://localhost:3000',                 // for web dev (if any)
-    'http://192.168.1.13:8081',              // Expo Go on local network
-    'https://todo-backend-83q7.onrender.com', // backend itself
-    'exp://localhost:8081',                  // Expo Go local
-    'https://expo.dev',                      // Expo production
-    '*',                                     // fallback (allow all)
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+app.use(
+  cors({
+    origin: "*", // allow all for testing; restrict later if needed
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
+// app.use(cors({
+//   origin: [
+//     'http://localhost:8081',                 // for Expo local dev
+//     'http://localhost:3000',                 // for web dev (if any)
+//     'http://192.168.1.13:8081',              // Expo Go on local network
+//     'https://todo-backend-83q7.onrender.com', // backend itself
+//     'exp://localhost:8081',                  // Expo Go local
+//     'https://expo.dev',                      // Expo production
+//     '*',                                     // fallback (allow all)
+//   ],
+//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+//   allowedHeaders: ['Content-Type', 'Authorization'],
+// }));
 
 // ✅ Parse JSON bodies
 app.use(express.json());
