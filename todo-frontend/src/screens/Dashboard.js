@@ -18,7 +18,7 @@ export default function Dashboard({ navigation }) {
   const fetchPlan = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await axios.get(`http://localhost:3000/api/tasks/today?energy=${energy}`, {
+      const response = await axios.get(`http://192.168.1.13:3000/api/tasks/today?energy=${energy}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTasks(response.data.tasks);
@@ -31,7 +31,7 @@ export default function Dashboard({ navigation }) {
   const updateTaskStatus = async (taskId, newStatus) => {
     try {
       const token = await AsyncStorage.getItem('token');
-      await axios.put(`http://localhost:3000/api/tasks/${taskId}`, {
+      await axios.put(`http://192.168.1.13:3000/api/tasks/${taskId}`, {
         status: newStatus,
       }, {
         headers: { Authorization: `Bearer ${token}` },
@@ -56,7 +56,7 @@ export default function Dashboard({ navigation }) {
           onPress: async () => {
             try {
               const token = await AsyncStorage.getItem('token');
-              await axios.delete(`http://localhost:3000/api/tasks/${taskId}`, {
+              await axios.delete(`http://192.168.1.13:3000/api/tasks/${taskId}`, {
                 headers: { Authorization: `Bearer ${token}` },
               });
               // Refresh tasks

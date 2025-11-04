@@ -38,3 +38,8 @@
 - [x] Update Goals.js to use POST /api/tasks for adding tasks
 - [x] Update Dashboard.js to fetch from GET /api/tasks/today and add update/delete UI
 - [x] Update TODO.md to mark task management as completed
+
+## Fix Network Error in Expo Go
+- [x] Update all hardcoded localhost:3000 URLs to use IP address 192.168.1.13:3000
+- [x] Update CORS in Backend/app.js to allow the IP address
+- [ ] Test the app in Expo Go after fixes

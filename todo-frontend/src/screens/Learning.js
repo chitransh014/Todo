@@ -13,7 +13,7 @@ export default function Learning() {
 const fetchStats = async () => {
   try {
     const token = await AsyncStorage.getItem('token');
-    const response = await axios.get('http://localhost:3000/api/tasks/learning/stats', {
+    const response = await axios.get('http://192.168.1.13:3000/api/tasks/learning/stats', {
       headers: { Authorization: `Bearer ${token}` },
     });
     setStats(response.data);
