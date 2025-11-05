@@ -497,4 +497,52 @@ router.delete('/:taskId/subtasks/:subtaskId', authenticateToken, async (req, res
   }
 });
 
+// Get single task
+router.get('/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id;
+
+    if (!process.env.MONGODB_URI) {
+      return res.status(200).json({
+        task: {
+          id,
+          title: 'Mock Task',
+          description: 'Mock description',
+          priority: 5,
+          energyLevel: 'medium',
+          status: 'pending',
+          dueDate: null,
+          subtasks: [],
+        },
+      });
+    }
+
+    const task = await Task.findOne({ _id: id, userId });
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    res.status(200).json({
+      task: {
+        id: task._id,
+        title: task.title,
+        description: task.description,
+        priority: task.priority,
+        energyLevel: task.energyLevel,
+        status: task.status,
+        dueDate: task.dueDate,
+        subtasks: task.subtasks.map(subtask => ({
+          id: subtask._id,
+          title: subtask.title,
+          status: subtask.status,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error('Get single task error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

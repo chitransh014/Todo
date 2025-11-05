@@ -1,100 +1,134 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../api/auth';
 
 export default function TaskDetail({ route, navigation }) {
-  const { task } = route.params;
-  const [title, setTitle] = useState(task.title);
-  const [details, setDetails] = useState(task.description || '');
-  const [date, setDate] = useState(task.dueDate || '');
+  const { taskId } = route.params; // ✅ received from navigation
+  const [task, setTask] = useState(null);
+  const [subtasks, setSubtasks] = useState([]);
+  const [newSubtask, setNewSubtask] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleMarkComplete = async () => {
+  // 🔹 Fetch Task Details
+  const fetchTask = async () => {
     try {
+      setLoading(true);
       const token = await AsyncStorage.getItem('token');
-      await axios.put(`${BASE_URL}/tasks/${task.id}`, {
-        status: 'completed',
-      }, {
+      const res = await axios.get(`${BASE_URL}/tasks/${taskId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      alert('Task marked as completed');
+      setTask(res.data.task);
+      setSubtasks(res.data.task.subtasks || []);
+    } catch (error) {
+      console.error('Fetch task error:', error);
+      Alert.alert('Error', 'Failed to load task details.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTask();
+  }, []);
+
+  // 🔹 Add Subtask
+  const addSubtask = async () => {
+    if (!newSubtask.trim()) return;
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await axios.post(
+        `${BASE_URL}/tasks/${taskId}/subtasks`,
+        { title: newSubtask },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSubtasks([...subtasks, res.data.subtask]);
+      setNewSubtask('');
+    } catch (error) {
+      console.error('Add subtask error:', error);
+      Alert.alert('Error', 'Failed to add subtask.');
+    }
+  };
+
+  // 🔹 Mark Task Complete
+  const markComplete = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await axios.put(
+        `${BASE_URL}/tasks/${taskId}`,
+        { status: 'completed' },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      Alert.alert('Task Completed 🎉');
       navigation.goBack();
     } catch (error) {
-      console.error('Mark complete error:', error);
-      alert('Failed to mark task as completed');
+      Alert.alert('Error', 'Failed to mark task complete.');
     }
   };
 
-  const handleUpdateTitle = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      await axios.put(`${BASE_URL}/tasks/${task.id}`, {
-        title: title.trim(),
-      }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      alert('Task title updated');
-    } catch (error) {
-      console.error('Update title error:', error);
-      alert('Failed to update task title');
-    }
-  };
+  if (!task) return <Text style={{ padding: 20 }}>Loading...</Text>;
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>{task.title}</Text>
+
+      <Text style={styles.label}>Details</Text>
       <TextInput
-        style={styles.titleInput}
-        value={title}
-        onChangeText={setTitle}
-        onBlur={handleUpdateTitle}
-        placeholder="Task title"
+        style={styles.input}
+        value={task.description}
+        onChangeText={(text) => setTask({ ...task, description: text })}
+        placeholder="Add details"
+        multiline
       />
 
-      <TouchableOpacity style={styles.row}>
-        <Ionicons name="reorder-three-outline" size={20} color="#bbb" />
-        <Text style={styles.option}>Add details</Text>
-      </TouchableOpacity>
+      <Text style={styles.label}>Energy Level</Text>
+      <Text style={styles.value}>{task.energyLevel}</Text>
 
-      <TouchableOpacity style={styles.row}>
-        <Ionicons name="time-outline" size={20} color="#bbb" />
-        <Text style={styles.option}>Add date/time</Text>
-      </TouchableOpacity>
+      <Text style={styles.label}>Subtasks</Text>
+      {subtasks.map((st, index) => (
+        <View key={index} style={styles.subtaskItem}>
+          <Text>• {st.title}</Text>
+        </View>
+      ))}
 
-      <TouchableOpacity style={styles.row}>
-        <Ionicons name="git-branch-outline" size={20} color="#bbb" />
-        <Text style={styles.option}>Add subtasks</Text>
-      </TouchableOpacity>
+      <View style={styles.row}>
+        <TextInput
+          placeholder="New Subtask"
+          value={newSubtask}
+          onChangeText={setNewSubtask}
+          style={[styles.input, { flex: 1 }]}
+        />
+        <Button title="Add" onPress={addSubtask} />
+      </View>
 
-      <TouchableOpacity style={styles.completeBtn} onPress={handleMarkComplete}>
-        <Text style={styles.completeText}>Mark completed</Text>
+      <TouchableOpacity style={styles.completeButton} onPress={markComplete}>
+        <Text style={styles.completeText}>Mark Completed</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1c1c1c', padding: 20 },
-  titleInput: {
-    fontSize: 22,
-    color: '#fff',
-    fontWeight: 'bold',
-    marginBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-    paddingBottom: 5,
+  container: { padding: 20 },
+  title: { fontSize: 26, fontWeight: 'bold', marginBottom: 10 },
+  label: { fontSize: 16, marginTop: 20, color: '#555' },
+  value: { fontSize: 16, marginTop: 5 },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 10,
+    marginTop: 8,
+    borderRadius: 5,
   },
-  row: { flexDirection: 'row', alignItems: 'center', marginVertical: 15 },
-  option: { color: '#ddd', fontSize: 16, marginLeft: 10 },
-  completeBtn: {
-    position: 'absolute',
-    bottom: 30,
-    alignSelf: 'center',
-    backgroundColor: '#e2b44e',
-    paddingHorizontal: 30,
-    paddingVertical: 12,
-    borderRadius: 25,
+  subtaskItem: { marginTop: 5, marginLeft: 10 },
+  row: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
+  completeButton: {
+    backgroundColor: '#FFD700',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 30,
+    alignItems: 'center',
   },
-  completeText: { color: '#000', fontWeight: '600' },
+  completeText: { fontWeight: 'bold', color: '#000' },
 });

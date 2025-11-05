@@ -72,7 +72,7 @@ export default function Dashboard({ navigation }) {
 
   const renderTask = ({ item }) => (
     <View style={styles.taskItem}>
-      <View style={styles.taskContent}>
+      <TouchableOpacity style={styles.taskContent} onPress={() => navigation.navigate('TaskDetail', { task: item })}>
         <Text style={styles.taskTitle}>{item.title}</Text>
         {item.description && (
           <Text style={styles.taskDescription}>{item.description}</Text>
@@ -80,7 +80,7 @@ export default function Dashboard({ navigation }) {
         <Text style={styles.taskMeta}>
           Priority: {item.priority} | Energy: {item.energyLevel}
         </Text>
-      </View>
+      </TouchableOpacity>
       <View style={styles.taskActions}>
         {item.status !== 'completed' && (
           <TouchableOpacity
