@@ -1,31 +1,29 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { View, Text, Button, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
-import Slider from '@react-native-community/slider';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthContext } from '../context/AuthContext';
 import { BASE_URL } from '../api/auth';
 
 export default function Dashboard({ navigation }) {
-  const [energy, setEnergy] = useState(5);
   const [tasks, setTasks] = useState([]);
   const [name, setName] = useState('');
   const { logout } = useContext(AuthContext);
 
   useEffect(() => {
-    fetchPlan();
-  }, [energy]);
+    fetchTasks();
+  }, []);
 
-  const fetchPlan = async () => {
+  const fetchTasks = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await axios.get(`${BASE_URL}/tasks/today?energy=${energy}`, {
+      const response = await axios.get(`${BASE_URL}/tasks`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTasks(response.data.tasks);
       setName(response.data.name);
     } catch (error) {
-      console.error('Fetch plan error:', error);
+      console.error('Fetch tasks error:', error);
     }
   };
 
@@ -38,7 +36,7 @@ export default function Dashboard({ navigation }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       // Refresh tasks
-      fetchPlan();
+      fetchTasks();
     } catch (error) {
       console.error('Update task error:', error);
       Alert.alert('Error', 'Failed to update task');
@@ -61,7 +59,7 @@ export default function Dashboard({ navigation }) {
                 headers: { Authorization: `Bearer ${token}` },
               });
               // Refresh tasks
-              fetchPlan();
+              fetchTasks();
             } catch (error) {
               console.error('Delete task error:', error);
               Alert.alert('Error', 'Failed to delete task');
@@ -106,22 +104,12 @@ export default function Dashboard({ navigation }) {
     <View style={styles.container}>
       <Text style={styles.greeting}>Hi, {name}</Text>
 
-      <Text style={styles.energyLabel}>Energy Level: {energy}</Text>
-      <Slider
-        minimumValue={1}
-        maximumValue={10}
-        step={1}
-        value={energy}
-        onValueChange={setEnergy}
-        style={styles.slider}
-      />
-
       <Text style={styles.sectionTitle}>Today's Tasks</Text>
       <FlatList
         data={tasks}
         keyExtractor={(item) => item.id}
         renderItem={renderTask}
-        ListEmptyComponent={<Text style={styles.emptyText}>No tasks for today. Adjust your energy level or add new tasks!</Text>}
+        ListEmptyComponent={<Text style={styles.emptyText}>No tasks for today. Add new tasks!</Text>}
       />
 
       <View style={styles.buttonContainer}>
@@ -141,8 +129,6 @@ export default function Dashboard({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
   greeting: { fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
-  energyLabel: { fontSize: 16, marginBottom: 10 },
-  slider: { marginBottom: 20 },
   sectionTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
   taskItem: {
     backgroundColor: '#f9f9f9',
