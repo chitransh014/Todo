@@ -6,10 +6,9 @@ const subtaskSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
-  status: {
-    type: String,
-    enum: ['pending', 'completed'],
-    default: 'pending',
+  completed: {
+    type: Boolean,
+    default: false,
   },
   createdAt: {
     type: Date,

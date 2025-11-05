@@ -36,7 +36,7 @@ const addSubtaskSchema = Joi.object({
 });
 
 const updateSubtaskSchema = Joi.object({
-  status: Joi.string().valid('pending', 'completed').optional(),
+  completed: Joi.boolean().optional(),
 });
 
 // Create task endpoint - integrates AI for breakdown
@@ -170,7 +170,7 @@ router.get('/', authenticateToken, async (req, res) => {
         subtasks: task.subtasks.map(subtask => ({
           id: subtask._id,
           title: subtask.title,
-          status: subtask.status,
+          completed: subtask.completed,
         })),
       })),
     });
@@ -394,7 +394,7 @@ router.post('/:taskId/subtasks', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Task not found' });
     }
 
-    const newSubtask = { title, status: 'pending' };
+    const newSubtask = { title, completed: false };
     task.subtasks.push(newSubtask);
     await task.save();
 
@@ -405,7 +405,7 @@ router.post('/:taskId/subtasks', authenticateToken, async (req, res) => {
       subtask: {
         id: addedSubtask._id,
         title: addedSubtask.title,
-        status: addedSubtask.status,
+        completed: addedSubtask.completed,
       },
     });
   } catch (error) {
@@ -454,11 +454,54 @@ router.put('/:taskId/subtasks/:subtaskId', authenticateToken, async (req, res) =
       subtask: {
         id: subtask._id,
         title: subtask.title,
-        status: subtask.status,
+        completed: subtask.completed,
       },
     });
   } catch (error) {
     console.error('Update subtask error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Toggle subtask completion
+router.put('/:taskId/subtasks/:subtaskId/toggle', authenticateToken, async (req, res) => {
+  try {
+    const { taskId, subtaskId } = req.params;
+    const userId = req.user._id;
+
+    if (!process.env.MONGODB_URI) {
+      return res.status(200).json({
+        message: 'Subtask toggled successfully (mock mode)',
+        subtask: {
+          id: subtaskId,
+          completed: true, // Mock toggle
+        },
+      });
+    }
+
+    const task = await Task.findOne({ _id: taskId, userId });
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    const subtask = task.subtasks.id(subtaskId);
+    if (!subtask) {
+      return res.status(404).json({ error: 'Subtask not found' });
+    }
+
+    subtask.completed = !subtask.completed;
+    await task.save();
+
+    res.status(200).json({
+      message: 'Subtask toggled successfully',
+      subtask: {
+        id: subtask._id,
+        title: subtask.title,
+        completed: subtask.completed,
+      },
+    });
+  } catch (error) {
+    console.error('Toggle subtask error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -535,7 +578,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
         subtasks: task.subtasks.map(subtask => ({
           id: subtask._id,
           title: subtask.title,
-          status: subtask.status,
+          completed: subtask.completed,
         })),
       },
     });

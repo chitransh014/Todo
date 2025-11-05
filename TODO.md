@@ -1,32 +1,4 @@
-# Task: Connect TaskDetail Screen with Backend for Full Functionality
-
-## Overview
-Update the TaskDetail screen to enable viewing, editing, adding subtasks, and marking tasks as completed. Add missing backend route for fetching a single task. Modify the Goals screen to list tasks and navigate to TaskDetail.
-
-## Steps to Complete
-
-### 1. Update TaskDetail.js ✅
-- Replaced the current TaskDetail.js with the provided modern, functional component.
-- Fetches task details by taskId, handles editing (title, description, energy, due date), adds subtasks, and marks as completed.
-- Uses the existing BASE_URL from auth.js for API calls.
-
-### 2. Add Get Single Task Route to Backend ✅
-- Added a new GET route: router.get('/:id', authenticateToken, async (req, res) => { ... }) in Backend/src/routes/tasks.js
-- Fetches a single task by ID and returns it with subtasks.
-
-### 3. Update Goals.js Screen ✅
-- Modified Goals.js to fetch and display a list of tasks for the user.
-- Added FlatList to show tasks.
-- Implemented onPress on each task to navigate to TaskDetail, passing { taskId: task.id }.
-- Kept the existing add task functionality and integrated it.
-
-### 4. Verify Navigation ✅
-- GoalsStack.js already has TaskDetail screen configured.
-- Navigation from Goals to TaskDetail works with taskId.
-
-### 5. Test Backend Routes
-- The new GET /:id route is implemented.
-- Subtask routes (already present) are functional.
-
-### 6. Update TODO.md ✅
-- Marked steps as completed.
+- [x] Update Backend/src/models/Task.js: Change subtaskSchema status to completed: Boolean, default false
+- [x] Update Backend/src/routes/tasks.js: Change subtask responses to use completed instead of status, update add/update subtask to use completed, add new PUT /:taskId/subtasks/:subtaskIndex/toggle route
+- [x] Update todo-frontend/src/screens/TaskDetail.js: Add Ionicons import, toggleSubtask function with optimistic update, update subtask rendering to interactive checkboxes with icons and strikethrough
+- [ ] Test the changes by running the app and verifying toggle functionality

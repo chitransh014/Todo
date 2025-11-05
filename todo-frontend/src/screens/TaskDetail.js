@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../api/auth';
@@ -51,6 +52,26 @@ export default function TaskDetail({ route, navigation }) {
     }
   };
 
+  // 🔹 Toggle Subtask Completion
+  const toggleSubtask = async (subtaskId, currentCompleted) => {
+    // Optimistic update
+    setSubtasks(subtasks.map(st => st.id === subtaskId ? { ...st, completed: !currentCompleted } : st));
+
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await axios.put(
+        `${BASE_URL}/tasks/${taskId}/subtasks/${subtaskId}/toggle`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (error) {
+      console.error('Toggle subtask error:', error);
+      // Revert optimistic update on error
+      setSubtasks(subtasks.map(st => st.id === subtaskId ? { ...st, completed: currentCompleted } : st));
+      Alert.alert('Error', 'Failed to toggle subtask.');
+    }
+  };
+
   // 🔹 Mark Task Complete
   const markComplete = async () => {
     try {
@@ -86,10 +107,15 @@ export default function TaskDetail({ route, navigation }) {
       <Text style={styles.value}>{task.energyLevel}</Text>
 
       <Text style={styles.label}>Subtasks</Text>
-      {subtasks.map((st, index) => (
-        <View key={index} style={styles.subtaskItem}>
-          <Text>• {st.title}</Text>
-        </View>
+      {subtasks.map((st) => (
+        <TouchableOpacity key={st.id} style={styles.subtaskItem} onPress={() => toggleSubtask(st.id, st.completed)}>
+          <Ionicons
+            name={st.completed ? 'checkbox' : 'square-outline'}
+            size={20}
+            color={st.completed ? '#4CAF50' : '#ccc'}
+          />
+          <Text style={[styles.subtaskText, st.completed && styles.completedText]}>{st.title}</Text>
+        </TouchableOpacity>
       ))}
 
       <View style={styles.row}>
@@ -121,7 +147,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
     borderRadius: 5,
   },
-  subtaskItem: { marginTop: 5, marginLeft: 10 },
+  subtaskItem: { flexDirection: 'row', alignItems: 'center', marginTop: 5, marginLeft: 10 },
+  subtaskText: { marginLeft: 10, fontSize: 16 },
+  completedText: { textDecorationLine: 'line-through', color: '#888' },
   row: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
   completeButton: {
     backgroundColor: '#FFD700',
