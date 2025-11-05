@@ -15,6 +15,7 @@ export default function Goals() {
   const [editDescription, setEditDescription] = useState('');
   const [editEnergyLevel, setEditEnergyLevel] = useState('medium');
   const [selectedTask, setSelectedTask] = useState(null);
+  const [subtaskModal, setSubtaskModal] = useState(null);
   const [newSubtask, setNewSubtask] = useState('');
 
   const fetchTasks = async () => {
@@ -130,7 +131,7 @@ export default function Goals() {
 
     try {
       const token = await AsyncStorage.getItem('token');
-      await axios.post(`${BASE_URL}/tasks/${selectedTask.id}/subtasks`, {
+      await axios.post(`${BASE_URL}/tasks/${subtaskModal.id}/subtasks`, {
         title: newSubtask.trim(),
       }, {
         headers: { Authorization: `Bearer ${token}` },
@@ -147,9 +148,9 @@ export default function Goals() {
   const toggleSubtask = async (subtaskId) => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const subtask = selectedTask.subtasks.find(s => s.id === subtaskId);
+      const subtask = subtaskModal.subtasks.find(s => s.id === subtaskId);
       const newStatus = subtask.status === 'completed' ? 'pending' : 'completed';
-      await axios.put(`${BASE_URL}/tasks/${selectedTask.id}/subtasks/${subtaskId}`, {
+      await axios.put(`${BASE_URL}/tasks/${subtaskModal.id}/subtasks/${subtaskId}`, {
         status: newStatus,
       }, {
         headers: { Authorization: `Bearer ${token}` },
@@ -164,7 +165,7 @@ export default function Goals() {
   const deleteSubtask = async (subtaskId) => {
     try {
       const token = await AsyncStorage.getItem('token');
-      await axios.delete(`${BASE_URL}/tasks/${selectedTask.id}/subtasks/${subtaskId}`, {
+      await axios.delete(`${BASE_URL}/tasks/${subtaskModal.id}/subtasks/${subtaskId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       Alert.alert('Success', 'Subtask deleted successfully');
@@ -215,35 +216,16 @@ export default function Goals() {
         data={tasks}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={styles.taskItem}>
+          <TouchableOpacity
+            style={styles.taskCard}
+            onPress={() => setSelectedTask(item)}
+          >
             <Text style={styles.taskTitle}>{item.title}</Text>
-            <Text style={styles.taskDesc}>{item.description}</Text>
+            {item.description ? (
+              <Text style={styles.taskDesc}>{item.description}</Text>
+            ) : null}
             <Text style={styles.taskEnergy}>Energy: {item.energyLevel}</Text>
-            <View style={styles.taskActions}>
-              {item.status !== 'completed' && (
-                <Button
-                  title="Mark Complete"
-                  onPress={() => handleMarkComplete(item.id)}
-                  color="#4CAF50"
-                />
-              )}
-              <Button
-                title="Subtasks"
-                onPress={() => setSelectedTask(item)}
-                color="blue"
-              />
-              <Button
-                title="Edit"
-                onPress={() => startEditing(item)}
-                color="orange"
-              />
-              <Button
-                title="Delete"
-                onPress={() => handleDelete(item.id)}
-                color="#f44336"
-              />
-            </View>
-          </View>
+          </TouchableOpacity>
         )}
       />
 
@@ -289,13 +271,35 @@ export default function Goals() {
 
       <Modal
         visible={!!selectedTask}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSelectedTask(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>{selectedTask?.title}</Text>
+
+            <Button title="Edit Task" onPress={() => { startEditing(selectedTask); setSelectedTask(null); }} />
+            <Button title="Manage Subtasks" onPress={() => { setSubtaskModal(selectedTask); setSelectedTask(null); }} />
+            {selectedTask?.status !== 'completed' && (
+              <Button title="Mark Complete" onPress={() => { handleMarkComplete(selectedTask.id); setSelectedTask(null); }} />
+            )}
+            <Button title="Delete Task" color="red" onPress={() => { handleDelete(selectedTask.id); setSelectedTask(null); }} />
+
+            <Button title="Close" color="gray" onPress={() => setSelectedTask(null)} />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={!!subtaskModal}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setSelectedTask(null)}
+        onRequestClose={() => setSubtaskModal(null)}
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Subtasks for {selectedTask?.title}</Text>
+            <Text style={styles.modalTitle}>Subtasks for {subtaskModal?.title}</Text>
 
             <TextInput
               placeholder="New subtask title"
@@ -306,7 +310,7 @@ export default function Goals() {
             <Button title="Add Subtask" onPress={addSubtask} />
 
             <FlatList
-              data={selectedTask?.subtasks || []}
+              data={subtaskModal?.subtasks || []}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
                 <View style={styles.subtaskItem}>
@@ -324,7 +328,7 @@ export default function Goals() {
               )}
             />
 
-            <Button title="Close" color="gray" onPress={() => setSelectedTask(null)} />
+            <Button title="Close" color="gray" onPress={() => setSubtaskModal(null)} />
           </View>
         </View>
       </Modal>
@@ -385,6 +389,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 10,
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalBox: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    width: '85%',
   },
   subtaskItem: {
     flexDirection: 'row',
