@@ -1,4 +1,7 @@
-- [x] Update Backend/src/models/Task.js: Change subtaskSchema status to completed: Boolean, default false
-- [x] Update Backend/src/routes/tasks.js: Change subtask responses to use completed instead of status, update add/update subtask to use completed, add new PUT /:taskId/subtasks/:subtaskIndex/toggle route
-- [x] Update todo-frontend/src/screens/TaskDetail.js: Add Ionicons import, toggleSubtask function with optimistic update, update subtask rendering to interactive checkboxes with icons and strikethrough
-- [ ] Test the changes by running the app and verifying toggle functionality
+- [ ] Add delete subtask route to Backend/src/routes/tasks.js
+- [ ] Add edit subtask route to Backend/src/routes/tasks.js
+- [ ] Update todo-frontend/src/screens/TaskDetail.js: add imports for Ionicons and Alert
+- [ ] Add editSubtask function to TaskDetail.js
+- [ ] Add deleteSubtask function to TaskDetail.js
+- [ ] Update subtask list UI in TaskDetail.js
+- [ ] Add new styles to TaskDetail.js

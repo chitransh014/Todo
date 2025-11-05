@@ -540,6 +540,50 @@ router.delete('/:taskId/subtasks/:subtaskId', authenticateToken, async (req, res
   }
 });
 
+// Delete subtask by index
+router.delete('/:id/subtasks/:subtaskIndex', authenticateToken, async (req, res) => {
+  try {
+    const { id, subtaskIndex } = req.params;
+
+    const task = await Task.findById(id);
+    if (!task) return res.status(404).json({ error: 'Task not found' });
+
+    if (!task.subtasks[subtaskIndex])
+      return res.status(404).json({ error: 'Subtask not found' });
+
+    // Remove subtask
+    task.subtasks.splice(subtaskIndex, 1);
+    await task.save();
+
+    res.status(200).json({ message: 'Subtask deleted', subtasks: task.subtasks });
+  } catch (error) {
+    console.error('Delete subtask error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Edit subtask title
+router.put('/:id/subtasks/:subtaskIndex', authenticateToken, async (req, res) => {
+  try {
+    const { id, subtaskIndex } = req.params;
+    const { title } = req.body;
+
+    const task = await Task.findById(id);
+    if (!task) return res.status(404).json({ error: 'Task not found' });
+
+    if (!task.subtasks[subtaskIndex])
+      return res.status(404).json({ error: 'Subtask not found' });
+
+    task.subtasks[subtaskIndex].title = title;
+    await task.save();
+
+    res.status(200).json({ message: 'Subtask updated', subtasks: task.subtasks });
+  } catch (error) {
+    console.error('Edit subtask error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get single task
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
