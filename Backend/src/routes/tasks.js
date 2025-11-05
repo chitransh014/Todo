@@ -31,6 +31,14 @@ const updateTaskSchema = Joi.object({
   status: Joi.string().valid('pending', 'in_progress', 'completed', 'failed').optional(),
 });
 
+const addSubtaskSchema = Joi.object({
+  title: Joi.string().required(),
+});
+
+const updateSubtaskSchema = Joi.object({
+  status: Joi.string().valid('pending', 'completed').optional(),
+});
+
 // Create task endpoint - integrates AI for breakdown
 router.post('/create', authenticateToken, async (req, res) => {
   try {
@@ -159,6 +167,11 @@ router.get('/', authenticateToken, async (req, res) => {
         status: task.status,
         dueDate: task.dueDate,
         createdAt: task.createdAt,
+        subtasks: task.subtasks.map(subtask => ({
+          id: subtask._id,
+          title: subtask.title,
+          status: subtask.status,
+        })),
       })),
     });
   } catch (error) {
@@ -349,6 +362,137 @@ router.get('/today', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Get today tasks error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Add subtask to a task
+router.post('/:taskId/subtasks', authenticateToken, async (req, res) => {
+  try {
+    const { error, value } = addSubtaskSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+
+    const { taskId } = req.params;
+    const { title } = value;
+    const userId = req.user._id;
+
+    if (!process.env.MONGODB_URI) {
+      return res.status(201).json({
+        message: 'Subtask added successfully (mock mode)',
+        subtask: {
+          id: 'mock-subtask-id',
+          title,
+          status: 'pending',
+        },
+      });
+    }
+
+    const task = await Task.findOne({ _id: taskId, userId });
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    const newSubtask = { title, status: 'pending' };
+    task.subtasks.push(newSubtask);
+    await task.save();
+
+    const addedSubtask = task.subtasks[task.subtasks.length - 1];
+
+    res.status(201).json({
+      message: 'Subtask added successfully',
+      subtask: {
+        id: addedSubtask._id,
+        title: addedSubtask.title,
+        status: addedSubtask.status,
+      },
+    });
+  } catch (error) {
+    console.error('Add subtask error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update subtask status
+router.put('/:taskId/subtasks/:subtaskId', authenticateToken, async (req, res) => {
+  try {
+    const { error, value } = updateSubtaskSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+
+    const { taskId, subtaskId } = req.params;
+    const updateData = value;
+    const userId = req.user._id;
+
+    if (!process.env.MONGODB_URI) {
+      return res.status(200).json({
+        message: 'Subtask updated successfully (mock mode)',
+        subtask: {
+          id: subtaskId,
+          ...updateData,
+        },
+      });
+    }
+
+    const task = await Task.findOne({ _id: taskId, userId });
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    const subtask = task.subtasks.id(subtaskId);
+    if (!subtask) {
+      return res.status(404).json({ error: 'Subtask not found' });
+    }
+
+    Object.assign(subtask, updateData);
+    await task.save();
+
+    res.status(200).json({
+      message: 'Subtask updated successfully',
+      subtask: {
+        id: subtask._id,
+        title: subtask.title,
+        status: subtask.status,
+      },
+    });
+  } catch (error) {
+    console.error('Update subtask error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete subtask
+router.delete('/:taskId/subtasks/:subtaskId', authenticateToken, async (req, res) => {
+  try {
+    const { taskId, subtaskId } = req.params;
+    const userId = req.user._id;
+
+    if (!process.env.MONGODB_URI) {
+      return res.status(200).json({
+        message: 'Subtask deleted successfully (mock mode)',
+      });
+    }
+
+    const task = await Task.findOne({ _id: taskId, userId });
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    const subtask = task.subtasks.id(subtaskId);
+    if (!subtask) {
+      return res.status(404).json({ error: 'Subtask not found' });
+    }
+
+    task.subtasks.pull(subtaskId);
+    await task.save();
+
+    res.status(200).json({
+      message: 'Subtask deleted successfully',
+    });
+  } catch (error) {
+    console.error('Delete subtask error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

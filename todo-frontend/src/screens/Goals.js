@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, FlatList, StyleSheet, Modal, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, Button, FlatList, StyleSheet, Modal, TouchableOpacity, Alert } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,6 +14,8 @@ export default function Goals() {
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editEnergyLevel, setEditEnergyLevel] = useState('medium');
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [newSubtask, setNewSubtask] = useState('');
 
   const fetchTasks = async () => {
     try {
@@ -120,6 +122,59 @@ export default function Goals() {
     }
   };
 
+  const addSubtask = async () => {
+    if (!newSubtask.trim()) {
+      Alert.alert('Error', 'Please enter a subtask title');
+      return;
+    }
+
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await axios.post(`${BASE_URL}/tasks/${selectedTask.id}/subtasks`, {
+        title: newSubtask.trim(),
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      Alert.alert('Success', 'Subtask added successfully');
+      setNewSubtask('');
+      fetchTasks();
+    } catch (error) {
+      console.error('Add subtask error:', error);
+      Alert.alert('Error', 'Failed to add subtask');
+    }
+  };
+
+  const toggleSubtask = async (subtaskId) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const subtask = selectedTask.subtasks.find(s => s.id === subtaskId);
+      const newStatus = subtask.status === 'completed' ? 'pending' : 'completed';
+      await axios.put(`${BASE_URL}/tasks/${selectedTask.id}/subtasks/${subtaskId}`, {
+        status: newStatus,
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchTasks();
+    } catch (error) {
+      console.error('Toggle subtask error:', error);
+      Alert.alert('Error', 'Failed to update subtask');
+    }
+  };
+
+  const deleteSubtask = async (subtaskId) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await axios.delete(`${BASE_URL}/tasks/${selectedTask.id}/subtasks/${subtaskId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      Alert.alert('Success', 'Subtask deleted successfully');
+      fetchTasks();
+    } catch (error) {
+      console.error('Delete subtask error:', error);
+      Alert.alert('Error', 'Failed to delete subtask');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Add Task</Text>
@@ -173,6 +228,11 @@ export default function Goals() {
                 />
               )}
               <Button
+                title="Subtasks"
+                onPress={() => setSelectedTask(item)}
+                color="blue"
+              />
+              <Button
                 title="Edit"
                 onPress={() => startEditing(item)}
                 color="orange"
@@ -223,6 +283,48 @@ export default function Goals() {
 
             <Button title="Update Task" onPress={handleUpdateTask} />
             <Button title="Cancel" color="gray" onPress={() => setEditingTask(null)} />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={!!selectedTask}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setSelectedTask(null)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Subtasks for {selectedTask?.title}</Text>
+
+            <TextInput
+              placeholder="New subtask title"
+              value={newSubtask}
+              onChangeText={setNewSubtask}
+              style={styles.input}
+            />
+            <Button title="Add Subtask" onPress={addSubtask} />
+
+            <FlatList
+              data={selectedTask?.subtasks || []}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <View style={styles.subtaskItem}>
+                  <TouchableOpacity onPress={() => toggleSubtask(item.id)}>
+                    <Text style={[styles.subtaskTitle, item.status === 'completed' && styles.completed]}>
+                      {item.title}
+                    </Text>
+                  </TouchableOpacity>
+                  <Button
+                    title="Delete"
+                    onPress={() => deleteSubtask(item.id)}
+                    color="#f44336"
+                  />
+                </View>
+              )}
+            />
+
+            <Button title="Close" color="gray" onPress={() => setSelectedTask(null)} />
           </View>
         </View>
       </Modal>
@@ -283,5 +385,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 10,
     textAlign: 'center',
+  },
+  subtaskItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 10,
+    marginVertical: 5,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 5,
+  },
+  subtaskTitle: {
+    fontSize: 16,
+    flex: 1,
+  },
+  completed: {
+    textDecorationLine: 'line-through',
+    color: 'gray',
   },
 });

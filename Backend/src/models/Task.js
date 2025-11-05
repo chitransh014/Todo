@@ -1,5 +1,22 @@
 import mongoose from 'mongoose';
 
+const subtaskSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'completed'],
+    default: 'pending',
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
 const taskSchema = new mongoose.Schema(
   {
     title: {
@@ -39,6 +56,7 @@ const taskSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Goal',
     },
+    subtasks: [subtaskSchema],
     createdAt: {
       type: Date,
       default: Date.now,
