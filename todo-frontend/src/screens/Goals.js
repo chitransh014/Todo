@@ -5,7 +5,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../api/auth';
 
-export default function Goals() {
+export default function Goals({ navigation }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [energyLevel, setEnergyLevel] = useState('medium');
@@ -218,7 +218,7 @@ export default function Goals() {
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.taskCard}
-            onPress={() => setSelectedTask(item)}
+            onPress={() => navigation.navigate('TaskDetail', { task: item })}
           >
             <Text style={styles.taskTitle}>{item.title}</Text>
             {item.description ? (
@@ -392,15 +392,15 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalBox: {
     backgroundColor: 'white',
     padding: 20,
-    borderRadius: 10,
-    width: '85%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    width: '100%',
   },
   subtaskItem: {
     flexDirection: 'row',

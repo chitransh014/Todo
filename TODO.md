@@ -1,8 +1,7 @@
-# Refactor Goals.js for Cleaner UI
+# TODO: Implement Google Tasks-Style Detail View
 
 ## Steps to Complete
-
-- [ ] Step 1: Replace inline buttons with a pressable card in FlatList renderItem (make whole card tappable to set selectedTask)
-- [ ] Step 2: Add a Modal for actions (bottom sheet style with buttons: Edit, Subtasks, Mark Complete, Delete, Close)
-- [ ] Step 3: Add minimal styling (taskCard, modalOverlay, modalBox, modalTitle)
-- [ ] Step 4: Verify existing functions are reused (handleMarkComplete, handleDelete, startEditing, setSelectedTask for subtasks)
+- [x] Modify AppNavigator.js to include a stack navigator for Goals with GoalsMain and TaskDetail screens
+- [x] Update Goals.js to navigate to TaskDetail screen instead of opening a modal for task details
+- [x] Create TaskDetail.js component with editable task title, placeholder buttons for add details/date/subtasks, and mark completed button
+- [ ] Test navigation and functionality

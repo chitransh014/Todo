@@ -9,16 +9,24 @@ import Login from "./screens/Auth/Login";
 import Signup from "./screens/Auth/Signup";
 import Dashboard from "./screens/Dashboard";
 import Goals from "./screens/Goals";
+import TaskDetail from "./screens/TaskDetail";
 import Learning from "./screens/Learning";
 import Focus from "./screens/Focus";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
+const GoalsStack = () => (
+  <Stack.Navigator>
+    <Stack.Screen name="GoalsMain" component={Goals} options={{ title: 'Goals' }} />
+    <Stack.Screen name="TaskDetail" component={TaskDetail} options={{ title: 'Task Detail' }} />
+  </Stack.Navigator>
+);
+
 const TabNavigator = () => (
   <Tab.Navigator>
     <Tab.Screen name="Dashboard" component={Dashboard} />
-    <Tab.Screen name="Goals" component={Goals} />
+    <Tab.Screen name="Goals" component={GoalsStack} />
     <Tab.Screen name="Learning" component={Learning} />
     <Tab.Screen name="Focus" component={Focus} />
   </Tab.Navigator>
