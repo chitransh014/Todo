@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Animated } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../api/auth';
+import AddTaskBottomSheet from '../components/AddTaskBottomSheet';
 
 const Dashboard = ({ setIsLoggedIn }) => {
   const navigation = useNavigation();
   const [tasks, setTasks] = useState([]);
   const [name, setName] = useState('');
-  const [expanded, setExpanded] = useState(false);
-  const animation = new Animated.Value(0);
+  const [isSheetVisible, setIsSheetVisible] = useState(false);
 
   useEffect(() => {
     fetchTasks();
@@ -73,16 +73,19 @@ const Dashboard = ({ setIsLoggedIn }) => {
     );
   };
 
-  const toggleMenu = () => {
-    const toValue = expanded ? 0 : 1;
-    Animated.spring(animation, { toValue, useNativeDriver: true }).start();
-    setExpanded(!expanded);
+  const addTask = async (task) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await axios.post(`${BASE_URL}/tasks`, task, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      // Refresh tasks
+      fetchTasks();
+    } catch (error) {
+      console.error('Add task error:', error);
+      Alert.alert('Error', 'Failed to add task');
+    }
   };
-
-  const translateY = animation.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -70],
-  });
 
   const renderTask = ({ item }) => (
     <View style={styles.taskItem}>
@@ -124,23 +127,18 @@ const Dashboard = ({ setIsLoggedIn }) => {
         ListEmptyComponent={<Text style={styles.emptyText}>No tasks for today. Add new tasks!</Text>}
       />
 
-      {/* Floating Action Buttons */}
-      {expanded && (
-        <Animated.View style={[styles.miniButton, { bottom: 100, transform: [{ translateY }] }]}>
-          <TouchableOpacity
-            style={[styles.innerButton, { backgroundColor: '#007BFF' }]}
-            onPress={() => navigation.navigate('Goals')}
-          >
-            <Ionicons name="add-outline" size={24} color="#fff" />
-          </TouchableOpacity>
-        </Animated.View>
-      )}
-
-      <TouchableOpacity style={styles.fab} onPress={toggleMenu}>
-        <Ionicons name={expanded ? 'close' : 'add'} size={28} color="#fff" />
+      <TouchableOpacity style={styles.fab} onPress={() => setIsSheetVisible(true)}>
+        <Text style={{ fontSize: 28, color: 'white' }}>+</Text>
       </TouchableOpacity>
 
-
+      <AddTaskBottomSheet
+        isVisible={isSheetVisible}
+        onClose={() => setIsSheetVisible(false)}
+        onAddTask={(task) => {
+          console.log('New Task:', task);
+          addTask(task);
+        }}
+      />
     </View>
   );
 }

@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AuthContext } from '../context/AuthContext';
 
-export default function LogoutButton({ setIsLoggedIn }) {
+export default function LogoutButton() {
+  const { logout } = useContext(AuthContext);
+
   const handleLogout = async () => {
     try {
-      await AsyncStorage.removeItem('token');
-      setIsLoggedIn(false); // 👈 instantly go to Login
+      await logout();
       console.log('✅ Logged out successfully');
     } catch (error) {
       console.error('Logout error:', error);

@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Alert, FlatList, TouchableOpacity } from 'react-native';
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../api/auth';
 
 export default function Goals({ navigation }) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -31,29 +30,7 @@ export default function Goals({ navigation }) {
     fetchTasks();
   }, []);
 
-  const handleSave = async () => {
-    if (!title.trim()) {
-      Alert.alert('Error', 'Please enter a task title');
-      return;
-    }
 
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const response = await axios.post(`${BASE_URL}/tasks`, {
-        title: title.trim(),
-        description: description.trim(),
-      }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      Alert.alert('Success', 'Task added successfully');
-      setTitle('');
-      setDescription('');
-      fetchTasks(); // Refresh the list
-    } catch (error) {
-      console.error('Save task error:', error);
-      Alert.alert('Error', 'Failed to add task');
-    }
-  };
 
   const renderTask = ({ item }) => (
     <TouchableOpacity
@@ -74,31 +51,11 @@ export default function Goals({ navigation }) {
         data={tasks}
         keyExtractor={(item) => item.id}
         renderItem={renderTask}
-        ListEmptyComponent={<Text style={styles.emptyText}>No tasks yet. Add one below!</Text>}
+        ListEmptyComponent={<Text style={styles.emptyText}>No tasks yet.</Text>}
         style={styles.list}
       />
 
-      <View style={styles.addTaskContainer}>
-        <Text style={styles.addTitle}>Add New Task</Text>
 
-        <TextInput
-          placeholder="Task Title"
-          value={title}
-          onChangeText={setTitle}
-          style={styles.input}
-        />
-
-        <TextInput
-          placeholder="Task Description (optional)"
-          value={description}
-          onChangeText={setDescription}
-          style={[styles.input, styles.textArea]}
-          multiline
-          numberOfLines={3}
-        />
-
-        <Button title="Add Task" onPress={handleSave} />
-      </View>
     </View>
   );
 }
@@ -119,17 +76,5 @@ const styles = StyleSheet.create({
   taskDescription: { fontSize: 14, color: '#666', marginTop: 5 },
   taskStatus: { fontSize: 12, color: '#999', marginTop: 5 },
   emptyText: { textAlign: 'center', fontSize: 16, color: '#999', marginTop: 20 },
-  addTaskContainer: { marginTop: 20 },
-  addTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
-    marginVertical: 10,
-    borderRadius: 5,
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
+
 });

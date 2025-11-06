@@ -9,12 +9,12 @@ import LogoutButton from '../components/LogoutButton';
 
 const Tab = createBottomTabNavigator();
 
-export default function MainTabs({ setIsLoggedIn }) {
+export default function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: true,
-        headerRight: () => <LogoutButton setIsLoggedIn={setIsLoggedIn} />,
+        headerRight: () => <LogoutButton />,
         tabBarIcon: ({ color, size }) => {
           let iconName;
           if (route.name === 'Dashboard') iconName = 'home-outline';
@@ -26,16 +26,16 @@ export default function MainTabs({ setIsLoggedIn }) {
       })}
     >
       <Tab.Screen name="Dashboard">
-        {(props) => <Dashboard {...props} setIsLoggedIn={setIsLoggedIn} />}
+        {(props) => <Dashboard {...props} />}
       </Tab.Screen>
       <Tab.Screen name="Goals">
-        {(props) => <GoalsStack {...props} setIsLoggedIn={setIsLoggedIn} />}
+        {(props) => <GoalsStack {...props} />}
       </Tab.Screen>
       <Tab.Screen name="Learning">
-        {(props) => <Learning {...props} setIsLoggedIn={setIsLoggedIn} />}
+        {(props) => <Learning {...props} />}
       </Tab.Screen>
       <Tab.Screen name="Focus">
-        {(props) => <Focus {...props} setIsLoggedIn={setIsLoggedIn} />}
+        {(props) => <Focus {...props} />}
       </Tab.Screen>
     </Tab.Navigator>
   );

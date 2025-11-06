@@ -1,10 +1,8 @@
-# Navigation Architecture Setup TODO
+# Fix React Native Reanimated Error
 
-- [x] Install @expo/vector-icons dependency
-- [x] Create navigation/AuthStack.js
-- [x] Create navigation/MainTabs.js
-- [x] Create navigation/GoalsStack.js
-- [x] Update src/App.js to new structure
-- [x] Delete src/AppNavigator.js
-- [x] Run npm install to install new dependency
-- [x] Test navigation flow (skipped per user request)
+## Steps to Complete
+- [x] Update react-native-reanimated version in package.json to ^3.16.1
+- [ ] Run npm install in todo-frontend directory
+- [ ] Clear Metro cache using npx expo start --clear
+- [ ] Test the app in Expo Go to verify the fix
+- [ ] If issues persist, clean node_modules and reinstall dependencies
