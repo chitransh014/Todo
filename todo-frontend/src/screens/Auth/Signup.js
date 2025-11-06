@@ -9,14 +9,18 @@ export default function Signup({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   const handleSignup = async () => {
-    if (!name || !email || !password) {
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedName || !trimmedEmail || !trimmedPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
     setLoading(true);
     try {
-      await signupAPI({ name, email, password });
+      await signupAPI({ name: trimmedName, email: trimmedEmail, password: trimmedPassword });
       Alert.alert('Success', 'Signup successful! Please log in.');
       navigation.navigate('Login');
     } catch (error) {
@@ -24,7 +28,7 @@ export default function Signup({ navigation }) {
       console.error('Signup failed:', JSON.stringify(error, null, 2));
 
       // Show a more informative error to the user
-      const errorMessage = error.response?.data?.message || 'An unexpected error occurred. Please try again.';
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'An unexpected error occurred. Please try again.';
       Alert.alert('Signup Failed', errorMessage);
     } finally {
       setLoading(false);

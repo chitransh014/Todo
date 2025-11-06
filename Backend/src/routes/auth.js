@@ -21,6 +21,11 @@ const loginSchema = Joi.object({
 // Register route
 router.post('/register', async (req, res) => {
   try {
+    // Trim inputs to avoid issues with trailing spaces
+    req.body.name = req.body.name?.trim();
+    req.body.email = req.body.email?.trim();
+    req.body.password = req.body.password?.trim();
+
     const { error, value } = registerSchema.validate(req.body);
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
