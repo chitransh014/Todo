@@ -1,14 +1,17 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, Button, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Animated } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AuthContext } from '../context/AuthContext';
 import { BASE_URL } from '../api/auth';
 
-export default function Dashboard({ navigation }) {
+const Dashboard = ({ setIsLoggedIn }) => {
+  const navigation = useNavigation();
   const [tasks, setTasks] = useState([]);
   const [name, setName] = useState('');
-  const { logout } = useContext(AuthContext);
+  const [expanded, setExpanded] = useState(false);
+  const animation = new Animated.Value(0);
 
   useEffect(() => {
     fetchTasks();
@@ -70,6 +73,17 @@ export default function Dashboard({ navigation }) {
     );
   };
 
+  const toggleMenu = () => {
+    const toValue = expanded ? 0 : 1;
+    Animated.spring(animation, { toValue, useNativeDriver: true }).start();
+    setExpanded(!expanded);
+  };
+
+  const translateY = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -70],
+  });
+
   const renderTask = ({ item }) => (
     <View style={styles.taskItem}>
       <TouchableOpacity style={styles.taskContent} onPress={() => navigation.navigate('TaskDetail', { task: item })}>
@@ -110,16 +124,23 @@ export default function Dashboard({ navigation }) {
         ListEmptyComponent={<Text style={styles.emptyText}>No tasks for today. Add new tasks!</Text>}
       />
 
-      <View style={styles.buttonContainer}>
-        <Button title="Add Task" onPress={() => navigation.navigate('Goals')} />
-        <Button
-          title="Logout"
-          onPress={() => {
-            logout();
-            navigation.navigate('Login');
-          }}
-        />
-      </View>
+      {/* Floating Action Buttons */}
+      {expanded && (
+        <Animated.View style={[styles.miniButton, { bottom: 100, transform: [{ translateY }] }]}>
+          <TouchableOpacity
+            style={[styles.innerButton, { backgroundColor: '#007BFF' }]}
+            onPress={() => navigation.navigate('Goals')}
+          >
+            <Ionicons name="add-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+        </Animated.View>
+      )}
+
+      <TouchableOpacity style={styles.fab} onPress={toggleMenu}>
+        <Ionicons name={expanded ? 'close' : 'add'} size={28} color="#fff" />
+      </TouchableOpacity>
+
+
     </View>
   );
 }
@@ -152,4 +173,31 @@ const styles = StyleSheet.create({
   buttonText: { color: 'white', fontSize: 12 },
   emptyText: { textAlign: 'center', fontStyle: 'italic', color: '#666', marginTop: 20 },
   buttonContainer: { marginTop: 20, gap: 10 },
+  fab: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    backgroundColor: '#007BFF',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+  },
+  miniButton: {
+    position: 'absolute',
+    right: 30,
+  },
+  innerButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 3,
+  },
+
 });
+
+export default Dashboard;

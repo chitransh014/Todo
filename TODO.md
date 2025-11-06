@@ -1,9 +1,9 @@
-# TODO: Remove Priority and Energy Level from UI and Backend
+# TODO: Implement Global Logout Button
 
-## Steps to Complete:
-- [x] Edit Dashboard.js to remove priority and energy display from task cards
-- [x] Edit TaskDetail.js to remove the Energy Level section
-- [ ] Update Backend/src/models/Task.js to remove priority and energyLevel fields
-- [ ] Update Backend/src/routes/tasks.js to remove priority and energyLevel assignments and calculations
-- [ ] Optionally, remove Backend/src/utils/priority.js if no longer needed
-- [ ] Test the changes in the app
+## Steps to Complete
+
+- [ ] Update MainTabs.js: Enable headers (headerShown: true), import LogoutButton, and add headerRight with LogoutButton to screenOptions.
+- [ ] Update GoalsStack.js: Import LogoutButton and add headerRight with LogoutButton to Stack.Navigator screenOptions.
+- [ ] Edit Dashboard.js: Remove the existing logout button TouchableOpacity and related styles (logoutButton, logoutText).
+- [ ] Test the app to ensure logout works from all screens and redirects to login.
+- [ ] Verify headers appear correctly on all screens.

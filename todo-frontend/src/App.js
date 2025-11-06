@@ -23,7 +23,9 @@ function RootNavigator() {
     <NavigationContainer>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         {isLoggedIn ? (
-          <RootStack.Screen name="MainTabs" component={MainTabs} />
+          <RootStack.Screen name="MainTabs">
+            {(props) => <MainTabs {...props} setIsLoggedIn={setIsLoggedIn} />}
+          </RootStack.Screen>
         ) : (
           <RootStack.Screen name="AuthStack" component={AuthStack} />
         )}
