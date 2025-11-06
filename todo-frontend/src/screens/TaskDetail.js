@@ -103,8 +103,7 @@ export default function TaskDetail({ route, navigation }) {
         multiline
       />
 
-      <Text style={styles.label}>Energy Level</Text>
-      <Text style={styles.value}>{task.energyLevel}</Text>
+
 
       <Text style={styles.label}>Subtasks</Text>
       {subtasks.map((st) => (

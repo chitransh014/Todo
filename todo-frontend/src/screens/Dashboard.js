@@ -77,9 +77,7 @@ export default function Dashboard({ navigation }) {
         {item.description && (
           <Text style={styles.taskDescription}>{item.description}</Text>
         )}
-        <Text style={styles.taskMeta}>
-          Priority: {item.priority} | Energy: {item.energyLevel}
-        </Text>
+
       </TouchableOpacity>
       <View style={styles.taskActions}>
         {item.status !== 'completed' && (
