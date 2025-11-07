@@ -1,13 +1,10 @@
-import 'react-native-gesture-handler';
-import 'react-native-reanimated';
 import React, { useContext } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import AuthStack from './navigation/AuthStack';
 import MainTabs from './navigation/MainTabs';
+import { TaskProvider } from './context/TaskContext';
 
 const RootStack = createNativeStackNavigator();
 
@@ -29,12 +26,11 @@ function RootNavigator() {
 
 export default function App() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <BottomSheetModalProvider>
-        <AuthProvider>
-          <RootNavigator />
-        </AuthProvider>
-      </BottomSheetModalProvider>
-    </GestureHandlerRootView>
+    <AuthProvider>
+      <TaskProvider>
+        <RootNavigator />
+      </TaskProvider>
+    </AuthProvider>
   );
 }
+

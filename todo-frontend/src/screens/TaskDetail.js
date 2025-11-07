@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../api/auth';
+import { useTasks } from '../context/TaskContext';
 
 export default function TaskDetail({ route, navigation }) {
   const { taskId } = route.params; // ✅ received from navigation
@@ -11,6 +12,9 @@ export default function TaskDetail({ route, navigation }) {
   const [subtasks, setSubtasks] = useState([]);
   const [newSubtask, setNewSubtask] = useState('');
   const [loading, setLoading] = useState(false);
+  const [editingSubtaskId, setEditingSubtaskId] = useState(null);
+  const [editingTitle, setEditingTitle] = useState('');
+  const [showAddSubtask, setShowAddSubtask] = useState(false);
 
   // 🔹 Fetch Task Details
   const fetchTask = async () => {
@@ -72,6 +76,63 @@ export default function TaskDetail({ route, navigation }) {
     }
   };
 
+  // 🔹 Edit Subtask Title
+  const startEditing = (subtaskId, currentTitle) => {
+    setEditingSubtaskId(subtaskId);
+    setEditingTitle(currentTitle);
+  };
+
+  const saveEdit = async () => {
+    if (!editingTitle.trim()) return;
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await axios.put(
+        `${BASE_URL}/tasks/${taskId}/subtasks/${editingSubtaskId}`,
+        { title: editingTitle },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSubtasks(subtasks.map(st => st.id === editingSubtaskId ? { ...st, title: editingTitle } : st));
+      setEditingSubtaskId(null);
+      setEditingTitle('');
+    } catch (error) {
+      console.error('Edit subtask error:', error);
+      Alert.alert('Error', 'Failed to edit subtask.');
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingSubtaskId(null);
+    setEditingTitle('');
+  };
+
+  // 🔹 Delete Subtask
+  const deleteSubtask = async (subtaskId) => {
+    Alert.alert(
+      'Delete Subtask',
+      'Are you sure you want to delete this subtask?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('token');
+              await axios.delete(
+                `${BASE_URL}/tasks/${taskId}/subtasks/${subtaskId}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              setSubtasks(subtasks.filter(st => st.id !== subtaskId));
+            } catch (error) {
+              console.error('Delete subtask error:', error);
+              Alert.alert('Error', 'Failed to delete subtask.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // 🔹 Mark Task Complete
   const markComplete = async () => {
     try {
@@ -103,29 +164,65 @@ export default function TaskDetail({ route, navigation }) {
         multiline
       />
 
+      <Text style={styles.label}>Due Date</Text>
+      <Text style={styles.value}>
+        {task.dueDate ? new Date(task.dueDate).toDateString() : 'No due date set'}
+      </Text>
 
 
-      <Text style={styles.label}>Subtasks</Text>
+
+      <TouchableOpacity onPress={() => setShowAddSubtask(!showAddSubtask)} style={styles.addSubtaskHeader}>
+        <Text style={styles.label}>Subtasks</Text>
+        <Ionicons name={showAddSubtask ? 'chevron-up' : 'chevron-down'} size={20} color="#555" />
+      </TouchableOpacity>
       {subtasks.map((st) => (
-        <TouchableOpacity key={st.id} style={styles.subtaskItem} onPress={() => toggleSubtask(st.id, st.completed)}>
-          <Ionicons
-            name={st.completed ? 'checkbox' : 'square-outline'}
-            size={20}
-            color={st.completed ? '#4CAF50' : '#ccc'}
-          />
-          <Text style={[styles.subtaskText, st.completed && styles.completedText]}>{st.title}</Text>
-        </TouchableOpacity>
+        <View key={st.id} style={styles.subtaskItem}>
+          <TouchableOpacity onPress={() => toggleSubtask(st.id, st.completed)} style={styles.checkboxContainer}>
+            <Ionicons
+              name={st.completed ? 'checkbox' : 'square-outline'}
+              size={20}
+              color={st.completed ? '#4CAF50' : '#ccc'}
+            />
+          </TouchableOpacity>
+          {editingSubtaskId === st.id ? (
+            <View style={styles.editContainer}>
+              <TextInput
+                style={styles.editInput}
+                value={editingTitle}
+                onChangeText={setEditingTitle}
+                autoFocus
+              />
+              <TouchableOpacity onPress={saveEdit} style={styles.saveBtn}>
+                <Ionicons name="checkmark" size={20} color="#4CAF50" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={cancelEdit} style={styles.cancelBtn}>
+                <Ionicons name="close" size={20} color="#ff0000" />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => startEditing(st.id, st.title)} style={styles.textContainer}>
+              <Text style={[styles.subtaskText, st.completed && styles.completedText]}>{st.title}</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={() => deleteSubtask(st.id)} style={styles.deleteBtn}>
+            <Ionicons name="trash" size={20} color="#ff0000" />
+          </TouchableOpacity>
+        </View>
       ))}
 
-      <View style={styles.row}>
-        <TextInput
-          placeholder="New Subtask"
-          value={newSubtask}
-          onChangeText={setNewSubtask}
-          style={[styles.input, { flex: 1 }]}
-        />
-        <Button title="Add" onPress={addSubtask} />
-      </View>
+      {showAddSubtask && (
+        <View style={styles.addSubtaskContainer}>
+          <TextInput
+            placeholder="Add a subtask"
+            value={newSubtask}
+            onChangeText={setNewSubtask}
+            style={styles.addSubtaskInput}
+          />
+          <TouchableOpacity onPress={addSubtask} style={styles.addSubtaskBtn}>
+            <Ionicons name="checkmark" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      )}
 
       <TouchableOpacity style={styles.completeButton} onPress={markComplete}>
         <Text style={styles.completeText}>Mark Completed</Text>
@@ -147,8 +244,39 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   subtaskItem: { flexDirection: 'row', alignItems: 'center', marginTop: 5, marginLeft: 10 },
-  subtaskText: { marginLeft: 10, fontSize: 16 },
+  checkboxContainer: { marginRight: 10 },
+  textContainer: { flex: 1 },
+  subtaskText: { fontSize: 16 },
   completedText: { textDecorationLine: 'line-through', color: '#888' },
+  editContainer: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  editInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 5,
+    borderRadius: 5,
+    marginRight: 10,
+  },
+  saveBtn: { marginRight: 10 },
+  cancelBtn: { marginRight: 10 },
+  deleteBtn: { marginLeft: 10 },
+  addSubtaskHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20 },
+  addSubtaskContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 10, marginLeft: 10 },
+  addSubtaskInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 10,
+    borderRadius: 5,
+    marginRight: 10,
+  },
+  addSubtaskBtn: {
+    backgroundColor: '#007BFF',
+    padding: 10,
+    borderRadius: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   row: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
   completeButton: {
     backgroundColor: '#FFD700',

@@ -21,6 +21,9 @@ const addTaskSchema = Joi.object({
   description: Joi.string().optional(),
   dueDate: Joi.date().optional(),
   energyLevel: Joi.string().valid('low', 'medium', 'high').default('medium'),
+  subtasks: Joi.array().items(Joi.object({
+    title: Joi.string().required(),
+  })).optional(),
 });
 
 const updateTaskSchema = Joi.object({
@@ -212,6 +215,7 @@ router.post('/', authenticateToken, async (req, res) => {
       priority: calculatePriority(energyLevel),
       energyLevel,
       userId,
+      subtasks: value.subtasks || [],
     });
     await task.save();
 

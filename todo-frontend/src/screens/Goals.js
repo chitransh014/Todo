@@ -1,61 +1,77 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, FlatList, TouchableOpacity } from 'react-native';
-
-import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BASE_URL } from '../api/auth';
+import React, { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity,RefreshControl } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTasks } from '../context/TaskContext';
+import AddTaskModal from '../components/AddTaskModal';
 
 export default function Goals({ navigation }) {
+  const { tasks, fetchTasks, updateTask, addTask } = useTasks();
+  const [refreshing, setRefreshing] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
 
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  const fetchTasks = async () => {
-    try {
-      setLoading(true);
-      const token = await AsyncStorage.getItem('token');
-      const response = await axios.get(`${BASE_URL}/tasks`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setTasks(response.data.tasks);
-    } catch (error) {
-      console.error('Fetch tasks error:', error);
-      Alert.alert('Error', 'Failed to load tasks');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
-
+  useFocusEffect(
+    useCallback(() => {
+      fetchTasks(); // refresh every time you come back to this screen
+    }, [fetchTasks])
+  );
 
   const renderTask = ({ item }) => (
     <TouchableOpacity
       style={styles.taskItem}
-      onPress={() => navigation.navigate('TaskDetail', { taskId: item.id })}
+      onPress={() => {
+        setSelectedTask(item);
+        setIsModalVisible(true);
+      }}
     >
       <Text style={styles.taskTitle}>{item.title}</Text>
-      <Text style={styles.taskDescription}>{item.description || 'No description'}</Text>
+      <Text style={styles.taskDescription}>
+        {item.description || 'No description'}
+      </Text>
       <Text style={styles.taskStatus}>Status: {item.status}</Text>
+      {item.subtasks && item.subtasks.length > 0 && (
+        <Text style={styles.subtaskCount}>
+          Subtasks: {item.subtasks.filter(st => st.completed).length}/{item.subtasks.length}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Tasks</Text>
+      <Text style={styles.title}>My Tasks</Text>
 
       <FlatList
         data={tasks}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={renderTask}
-        ListEmptyComponent={<Text style={styles.emptyText}>No tasks yet.</Text>}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>No tasks yet.</Text>
+        }
         style={styles.list}
       />
 
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => {
+          setSelectedTask(null);
+          setIsModalVisible(true);
+        }}
+      >
+        <Ionicons name="add" size={30} color="#fff" />
+      </TouchableOpacity>
 
+      <AddTaskModal
+        isVisible={isModalVisible}
+        onClose={() => {
+          setIsModalVisible(false);
+          setSelectedTask(null);
+        }}
+        onAddTask={addTask}
+        taskToEdit={selectedTask}
+        onUpdateTask={updateTask}
+      />
     </View>
   );
 }
@@ -75,6 +91,22 @@ const styles = StyleSheet.create({
   taskTitle: { fontSize: 18, fontWeight: 'bold' },
   taskDescription: { fontSize: 14, color: '#666', marginTop: 5 },
   taskStatus: { fontSize: 12, color: '#999', marginTop: 5 },
+  subtaskCount: { fontSize: 12, color: '#666', marginTop: 5 },
   emptyText: { textAlign: 'center', fontSize: 16, color: '#999', marginTop: 20 },
-
+  addButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: '#007BFF',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
 });
