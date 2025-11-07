@@ -86,18 +86,22 @@ const toggleSubtaskCompletion = (index) => {
 };
 
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title.trim()) {
       alert("Please enter a task title");
       return;
     }
     const filteredSubtasks = subtasks.filter((st) => st.title.trim() !== "");
-    if (taskToEdit) {
-      onUpdateTask(taskToEdit.id, { title, description, dueDate });
-    } else {
-      onAddTask({ title, description, dueDate, subtasks: filteredSubtasks });
+    try {
+      if (taskToEdit) {
+        await onUpdateTask(taskToEdit.id, { title, description, dueDate, subtasks: filteredSubtasks });
+      } else {
+        await onAddTask({ title, description, dueDate, subtasks: filteredSubtasks });
+      }
+      onClose();
+    } catch (error) {
+      alert("Error saving task. Please try again.");
     }
-    onClose();
   };
 
   const onDateChange = (event, selectedDate) => {
