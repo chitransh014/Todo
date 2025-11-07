@@ -29,9 +29,13 @@ const addTaskSchema = Joi.object({
 const updateTaskSchema = Joi.object({
   title: Joi.string().optional(),
   description: Joi.string().optional(),
-  dueDate: Joi.date().optional(),
+  dueDate: Joi.date().optional().allow(null),
   energyLevel: Joi.string().valid('low', 'medium', 'high').optional(),
   status: Joi.string().valid('pending', 'in_progress', 'completed', 'failed').optional(),
+  subtasks: Joi.array().items(Joi.object({
+    title: Joi.string().required(),
+    completed: Joi.boolean().optional(),
+  })).optional(),
 });
 
 const addSubtaskSchema = Joi.object({
@@ -256,6 +260,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
         task: {
           id,
           ...updateData,
+          subtasks: updateData.subtasks || [],
         },
       });
     }
@@ -281,6 +286,11 @@ router.put('/:id', authenticateToken, async (req, res) => {
         status: task.status,
         dueDate: task.dueDate,
         createdAt: task.createdAt,
+        subtasks: task.subtasks.map(subtask => ({
+          id: subtask._id,
+          title: subtask.title,
+          completed: subtask.completed,
+        })),
       },
     });
   } catch (error) {
