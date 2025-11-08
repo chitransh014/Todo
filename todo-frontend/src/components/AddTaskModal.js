@@ -49,14 +49,14 @@ export default function AddTaskModal({
       setTitle(taskToEdit.title || "");
       setDescription(taskToEdit.description || "");
       setDueDate(taskToEdit.dueDate ? new Date(taskToEdit.dueDate) : null);
-setSubtasks(
-  taskToEdit?.subtasks?.length
-    ? taskToEdit.subtasks.map((st) => ({
-        title: st.title,
-        completed: st.completed || false,
-      }))
-    : [{ title: "", completed: false }]
-);
+      setSubtasks(
+        taskToEdit?.subtasks?.length
+          ? taskToEdit.subtasks.map((st) => ({
+            title: st.title,
+            completed: st.completed || false,
+          }))
+          : [{ title: "", completed: false }]
+      );
 
     } else {
       setTitle("");
@@ -66,24 +66,24 @@ setSubtasks(
     }
   }, [taskToEdit, isVisible]);
 
-const addSubtask = () => setSubtasks([...subtasks, { title: "", completed: false }]);
+  const addSubtask = () => setSubtasks([...subtasks, { title: "", completed: false }]);
 
-const removeSubtask = (index) => {
-  setSubtasks(subtasks.filter((_, i) => i !== index));
-};
+  const removeSubtask = (index) => {
+    setSubtasks(subtasks.filter((_, i) => i !== index));
+  };
 
-const updateSubtask = (index, title) => {
-  const newSubtasks = [...subtasks];
-  newSubtasks[index].title = title;
-  setSubtasks(newSubtasks);
-};
+  const updateSubtask = (index, title) => {
+    const newSubtasks = [...subtasks];
+    newSubtasks[index].title = title;
+    setSubtasks(newSubtasks);
+  };
 
-// ✅ Add this one:
-const toggleSubtaskCompletion = (index) => {
-  const updated = [...subtasks];
-  updated[index].completed = !updated[index].completed;
-  setSubtasks(updated);
-};
+  // ✅ Add this one:
+  const toggleSubtaskCompletion = (index) => {
+    const updated = [...subtasks];
+    updated[index].completed = !updated[index].completed;
+    setSubtasks(updated);
+  };
 
 
   const handleSubmit = async () => {
@@ -105,9 +105,12 @@ const toggleSubtaskCompletion = (index) => {
   };
 
   const onDateChange = (event, selectedDate) => {
-    const currentDate = selectedDate || dueDate;
-    setShowDatePicker(Platform.OS === "ios");
-    setDueDate(currentDate);
+    if (event.type === "set") {
+      // ✅ User picked a date
+      setDueDate(selectedDate);
+    }
+    // ✅ Always close the picker afterward
+    setShowDatePicker(false);
   };
 
   // 👉 Swipe-down gesture handler
@@ -204,11 +207,12 @@ const toggleSubtaskCompletion = (index) => {
               <DateTimePicker
                 value={dueDate || new Date()}
                 mode="date"
-                display="default"
+                display={Platform.OS === "ios" ? "inline" : "default"}
                 onChange={onDateChange}
                 minimumDate={new Date()}
               />
             )}
+
 
             <Text style={styles.subHeader}>Subtasks</Text>
 

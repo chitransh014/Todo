@@ -267,7 +267,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 
     const task = await Task.findOneAndUpdate(
       { _id: id, userId },
-      updateData,
+      { $set: { ...updateData } },
       { new: true }
     );
 

@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity,RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+
 import { useTasks } from '../context/TaskContext';
 import AddTaskModal from '../components/AddTaskModal';
 
@@ -29,7 +29,10 @@ export default function Goals({ navigation }) {
       <Text style={styles.taskDescription}>
         {item.description || 'No description'}
       </Text>
-      <Text style={styles.taskStatus}>Status: {item.status}</Text>
+      <Text style={styles.taskStatus}>
+  {item.dueDate ? `Due: ${new Date(item.dueDate).toDateString()}` : "No due date"}
+</Text>
+
       {item.subtasks && item.subtasks.length > 0 && (
         <Text style={styles.subtaskCount}>
           Subtasks: {item.subtasks.filter(st => st.completed).length}/{item.subtasks.length}
@@ -51,16 +54,6 @@ export default function Goals({ navigation }) {
         }
         style={styles.list}
       />
-
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => {
-          setSelectedTask(null);
-          setIsModalVisible(true);
-        }}
-      >
-        <Ionicons name="add" size={30} color="#fff" />
-      </TouchableOpacity>
 
       <AddTaskModal
         isVisible={isModalVisible}
@@ -93,20 +86,5 @@ const styles = StyleSheet.create({
   taskStatus: { fontSize: 12, color: '#999', marginTop: 5 },
   subtaskCount: { fontSize: 12, color: '#666', marginTop: 5 },
   emptyText: { textAlign: 'center', fontSize: 16, color: '#999', marginTop: 20 },
-  addButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    backgroundColor: '#007BFF',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-  },
+
 });

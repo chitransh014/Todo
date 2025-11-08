@@ -45,18 +45,20 @@ export const TaskProvider = ({ children }) => {
 
   // helper to update task
   const updateTask = async (taskId, data) => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const response = await axios.put(`${BASE_URL}/tasks/${taskId}`, data, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setTasks((prev) =>
-        prev.map((t) => (t.id === taskId ? response.data.task : t))
-      );
-    } catch (err) {
-      console.error('Update task error:', err);
-    }
-  };
+  try {
+    const token = await AsyncStorage.getItem("token");
+    const response = await axios.put(`${BASE_URL}/tasks/${taskId}`, data, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    // ✅ update state
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? response.data.task : t))
+    );
+  } catch (err) {
+    console.error("Update task error:", err);
+  }
+};
+
 
   // helper to delete task
   const deleteTask = async (taskId) => {

@@ -28,7 +28,7 @@ const taskSchema = new mongoose.Schema(
       trim: true,
     },
     dueDate: {
-      type: Date,
+      type: Date,default: null
     },
 
     status: {
