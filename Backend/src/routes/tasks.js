@@ -21,6 +21,10 @@ const addTaskSchema = Joi.object({
   description: Joi.string().optional(),
   dueDate: Joi.date().optional(),
   energyLevel: Joi.string().valid('low', 'medium', 'high').default('medium'),
+  subtasks: Joi.array().items(Joi.object({
+    title: Joi.string().required(),
+    completed: Joi.boolean().optional(),
+  })).optional(),
 });
 
 
