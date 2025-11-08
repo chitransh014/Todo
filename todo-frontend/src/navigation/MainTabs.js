@@ -14,7 +14,25 @@ export default function MainTabs() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: true,
+        headerStyle: {
+          backgroundColor: '#3498db',
+        },
+        headerTintColor: '#ffffff',
+        headerTitleStyle: {
+          fontWeight: 'bold',
+          fontSize: 20,
+        },
         headerRight: () => <LogoutButton />,
+        tabBarStyle: {
+          backgroundColor: '#f8f9fa',
+          borderTopWidth: 1,
+          borderTopColor: '#e1e8ed',
+          height: 60,
+          paddingBottom: 5,
+          paddingTop: 5,
+        },
+        tabBarActiveTintColor: '#3498db',
+        tabBarInactiveTintColor: '#95a5a6',
         tabBarIcon: ({ color, size }) => {
           let iconName;
           if (route.name === 'Dashboard') iconName = 'home-outline';
