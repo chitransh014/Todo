@@ -64,7 +64,7 @@ const Dashboard = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.greeting}>Hi, {name}</Text>
+      {/* <Text style={styles.greeting}> {name}</Text> */}
       <Text style={styles.sectionTitle}>Today's Tasks</Text>
       <FlatList
         data={tasks}

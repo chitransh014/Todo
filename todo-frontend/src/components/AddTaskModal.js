@@ -48,7 +48,8 @@ export default function AddTaskModal({
     if (taskToEdit) {
       setTitle(taskToEdit.title || "");
       setDescription(taskToEdit.description || "");
-      setDueDate(taskToEdit.dueDate ? new Date(taskToEdit.dueDate) : null);
+      const taskDueDate = taskToEdit.dueDate ? new Date(taskToEdit.dueDate) : null;
+      setDueDate(taskDueDate && taskDueDate > new Date() ? taskDueDate : null);
       setSubtasks(
         taskToEdit?.subtasks?.length
           ? taskToEdit.subtasks.map((st) => ({
@@ -86,23 +87,40 @@ export default function AddTaskModal({
   };
 
 
-  const handleSubmit = async () => {
-    if (!title.trim()) {
-      alert("Please enter a task title");
-      return;
+const handleSubmit = async () => {
+  if (!title.trim()) {
+    alert("Please enter a task title");
+    return;
+  }
+
+  const filteredSubtasks = subtasks.filter((st) => st.title.trim() !== "");
+  const formattedDate = dueDate ? dueDate.toISOString() : null;
+
+  try {
+    if (taskToEdit) {
+      await onUpdateTask(taskToEdit.id, {
+        title,
+        description,
+        dueDate: formattedDate,
+        subtasks: filteredSubtasks,
+        energyLevel: "medium", // ✅ add default
+      });
+    } else {
+      await onAddTask({
+        title,
+        description,
+        dueDate: formattedDate,
+        subtasks: filteredSubtasks,
+        energyLevel: "medium", // ✅ add default
+      });
     }
-    const filteredSubtasks = subtasks.filter((st) => st.title.trim() !== "");
-    try {
-      if (taskToEdit) {
-        await onUpdateTask(taskToEdit.id, { title, description, dueDate, subtasks: filteredSubtasks });
-      } else {
-        await onAddTask({ title, description, dueDate, subtasks: filteredSubtasks });
-      }
-      onClose();
-    } catch (error) {
-      alert("Error saving task. Please try again.");
-    }
-  };
+    onClose();
+  } catch (error) {
+    console.error("Add task error:", error);
+    alert("Error saving task. Please try again.");
+  }
+};
+
 
   const onDateChange = (event, selectedDate) => {
     if (event.type === "set") {
@@ -217,46 +235,49 @@ export default function AddTaskModal({
             <Text style={styles.subHeader}>Subtasks</Text>
 
             {subtasks.map((subtask, index) => (
-              <View key={index} style={styles.subtaskRow}>
-                {/* Checkbox Icon */}
-                <TouchableOpacity
-                  onPress={() => toggleSubtaskCompletion(index)}
-                  style={styles.checkbox}
-                >
-                  {subtask.completed ? (
-                    <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
-                  ) : (
-                    <Ionicons name="ellipse-outline" size={24} color="#aaa" />
-                  )}
-                </TouchableOpacity>
+  <View key={index} style={styles.subtaskRow}>
+    {/* Checkbox Icon */}
+    <TouchableOpacity
+      onPress={() => toggleSubtaskCompletion(index)}
+      style={styles.checkbox}
+    >
+      {subtask.completed ? (
+        <Ionicons name="checkmark-circle" size={22} color="#4CAF50" />
+      ) : (
+        <Ionicons name="ellipse-outline" size={22} color="#ccc" />
+      )}
+    </TouchableOpacity>
 
-                {/* Subtask Text Input */}
-                <TextInput
-                  style={[
-                    styles.subtaskInput,
-                    subtask.completed && { textDecorationLine: "line-through", color: "#888" },
-                  ]}
-                  placeholder={`Subtask ${index + 1}`}
-                  value={subtask.title}
-                  onChangeText={(text) => updateSubtask(index, text)}
-                  editable={!subtask.completed}
-                  placeholderTextColor="#999"
-                />
+    {/* Subtask Input */}
+    <TextInput
+      style={[
+        styles.subtaskInput,
+        subtask.completed && { textDecorationLine: "line-through", color: "#999" },
+      ]}
+      placeholder="Add subtask"
+      value={subtask.title}
+      onChangeText={(text) => {
+        updateSubtask(index, text);
+        // Auto-add next blank subtask when user types in the last one
+        if (index === subtasks.length - 1 && text.trim().length > 0) {
+          addSubtask();
+        }
+      }}
+      placeholderTextColor="#aaa"
+    />
 
-                {/* Delete Button */}
-                {subtasks.length > 1 && (
-                  <TouchableOpacity onPress={() => removeSubtask(index)} style={styles.removeBtn}>
-                    <Ionicons name="trash" size={20} color="#FF4B4B" />
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))}
+    {/* Minimal Cross (instead of trash) */}
+    {subtasks.length > 1 && (
+      <TouchableOpacity onPress={() => removeSubtask(index)}>
+        <Text style={styles.crossIcon}>✕</Text>
+      </TouchableOpacity>
+    )}
+  </View>
+))}
 
 
-            <TouchableOpacity style={styles.addSubtaskBtn} onPress={addSubtask}>
-              <Ionicons name="add" size={18} color="#007BFF" />
-              <Text style={styles.addSubtaskText}>Add Subtask</Text>
-            </TouchableOpacity>
+
+
 
             <TouchableOpacity style={styles.addBtn} onPress={handleSubmit}>
               <Text style={styles.addBtnText}>
@@ -335,23 +356,38 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   subtaskRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  subtaskInput: { flex: 1 },
-  removeBtn: { marginLeft: 8 },
-  addSubtaskBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#007BFF",
-    borderRadius: 10,
-    paddingVertical: 10,
-    marginTop: 10,
-  },
-  addSubtaskText: { color: "#007BFF", fontWeight: "600", marginLeft: 4 },
+  flexDirection: "row",
+  alignItems: "center",
+  marginVertical: 6,
+},
+checkbox: {
+  marginRight: 8,
+},
+subtaskInput: {
+  flex: 1,
+  borderBottomWidth: 0.8,
+  borderColor: "#ddd",
+  fontSize: 15,
+  paddingVertical: 6,
+  color: "#333",
+},
+crossIcon: {
+  fontSize: 18,
+  color: "#FF4B4B",
+  marginLeft: 8,
+},
+  // removeBtn: { marginLeft: 8 },
+  // addSubtaskBtn: {
+  //   flexDirection: "row",
+  //   alignItems: "center",
+  //   justifyContent: "center",
+  //   borderWidth: 1,
+  //   borderColor: "#007BFF",
+  //   borderRadius: 10,
+  //   paddingVertical: 10,
+  //   marginTop: 10,
+  // },
+  // addSubtaskText: { color: "#007BFF", fontWeight: "600", marginLeft: 4 },
   addBtn: {
     backgroundColor: "#007BFF",
     borderRadius: 10,
