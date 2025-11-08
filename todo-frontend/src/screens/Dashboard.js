@@ -34,15 +34,12 @@ const Dashboard = () => {
 
   const renderTask = ({ item }) => (
     <View style={styles.taskItem}>
-      <TouchableOpacity
-        style={styles.taskContent}
-        onPress={() => navigation.navigate("TaskDetail", { task: item })}
-      >
+      <View style={styles.taskContent}>
         <Text style={styles.taskTitle}>{item.title}</Text>
         {item.description ? (
           <Text style={styles.taskDescription}>{item.description}</Text>
         ) : null}
-      </TouchableOpacity>
+      </View>
       <View style={styles.taskActions}>
         {item.status !== "completed" && (
           <TouchableOpacity
