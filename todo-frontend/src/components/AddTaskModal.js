@@ -48,8 +48,7 @@ export default function AddTaskModal({
     if (taskToEdit) {
       setTitle(taskToEdit.title || "");
       setDescription(taskToEdit.description || "");
-      const taskDueDate = taskToEdit.dueDate ? new Date(taskToEdit.dueDate) : null;
-      setDueDate(taskDueDate && taskDueDate > new Date() ? taskDueDate : null);
+      setDueDate(taskToEdit.dueDate ? new Date(taskToEdit.dueDate) : null);
       setSubtasks(
         taskToEdit?.subtasks?.length
           ? taskToEdit.subtasks.map((st) => ({
@@ -227,7 +226,7 @@ const handleSubmit = async () => {
                 mode="date"
                 display={Platform.OS === "ios" ? "inline" : "default"}
                 onChange={onDateChange}
-                minimumDate={new Date()}
+                minimumDate={taskToEdit ? null : new Date()}
               />
             )}
 
