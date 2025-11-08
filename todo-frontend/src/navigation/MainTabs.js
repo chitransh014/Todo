@@ -24,15 +24,15 @@ export default function MainTabs() {
         },
         headerRight: () => <LogoutButton />,
         tabBarStyle: {
-          backgroundColor: '#f8f9fa',
+          backgroundColor: '#3498db',
           borderTopWidth: 1,
           borderTopColor: '#e1e8ed',
           height: 60,
           paddingBottom: 5,
           paddingTop: 5,
         },
-        tabBarActiveTintColor: '#3498db',
-        tabBarInactiveTintColor: '#95a5a6',
+        tabBarActiveTintColor: '#ffffff',
+        tabBarInactiveTintColor: '#ffffff99',
         tabBarIcon: ({ color, size }) => {
           let iconName;
           if (route.name === 'Dashboard') iconName = 'home-outline';
