@@ -31,7 +31,8 @@ const addTaskSchema = Joi.object({
 const updateTaskSchema = Joi.object({
   title: Joi.string().optional(),
   description: Joi.string().optional(),
-  dueDate: Joi.date().optional().allow(null),
+  dueDate: Joi.alternatives().try(Joi.string().isoDate(), Joi.date(), Joi.allow(null)).optional(),
+  
   energyLevel: Joi.string().valid('low', 'medium', 'high').optional(),
   status: Joi.string().valid('pending', 'in_progress', 'completed', 'failed').optional(),
   subtasks: Joi.array().items(Joi.object({
