@@ -12,7 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { login as loginAPI, BASE_URL } from '../../api/auth';
+import { login as loginAPI } from '../../api/auth';
 import { AuthContext } from '../../context/AuthContext';
 
 export default function Login({ navigation }) {
@@ -22,35 +22,7 @@ export default function Login({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useContext(AuthContext);
 
-  const handleForgotPassword = async () => {
-    if (!email) {
-      Alert.alert('Error', 'Please enter your email address first');
-      return;
-    }
 
-    setLoading(true);
-    try {
-      const response = await fetch(`${BASE_URL}/auth/forgot-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        Alert.alert('Success', data.message);
-      } else {
-        Alert.alert('Error', data.error || 'Failed to send reset email');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Network error. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -119,9 +91,7 @@ export default function Login({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.forgotPassword} onPress={handleForgotPassword}>
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
+
 
           <TouchableOpacity
             style={[styles.loginButton, loading && styles.loginButtonDisabled]}
@@ -216,15 +186,7 @@ const styles = StyleSheet.create({
   eyeIcon: {
     padding: 5,
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginVertical: 15,
-  },
-  forgotPasswordText: {
-    color: '#3498db',
-    fontSize: 14,
-    fontWeight: '600',
-  },
+
   loginButton: {
     backgroundColor: '#3498db',
     borderRadius: 15,

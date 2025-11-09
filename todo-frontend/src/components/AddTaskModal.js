@@ -258,15 +258,9 @@ const handleSubmit = async () => {
         styles.subtaskInput,
         subtask.completed && { textDecorationLine: "line-through", color: "#999" },
       ]}
-      placeholder="Add subtask"
+      placeholder="Subtask"
       value={subtask.title}
-      onChangeText={(text) => {
-        updateSubtask(index, text);
-        // Auto-add next blank subtask when user types in the last one
-        if (index === subtasks.length - 1 && text.trim().length > 0) {
-          addSubtask();
-        }
-      }}
+      onChangeText={(text) => updateSubtask(index, text)}
       placeholderTextColor="#aaa"
     />
 
@@ -278,6 +272,12 @@ const handleSubmit = async () => {
     )}
   </View>
 ))}
+
+            {/* Add Subtask Button */}
+            <TouchableOpacity style={styles.addSubtaskBtn} onPress={addSubtask}>
+              <Ionicons name="add" size={20} color="#007BFF" />
+              <Text style={styles.addSubtaskText}>Add subtask</Text>
+            </TouchableOpacity>
 
 
 
@@ -436,6 +436,19 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 18,
     fontWeight: "bold",
+  },
+  addSubtaskBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    marginVertical: 8,
+  },
+  addSubtaskText: {
+    color: "#007BFF",
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
   },
   cancelText: {
     textAlign: "center",
