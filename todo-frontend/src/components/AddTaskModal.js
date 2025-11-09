@@ -10,6 +10,7 @@ import {
   ScrollView,
   Animated,
   PanResponder,
+  KeyboardAvoidingView,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
@@ -159,7 +160,10 @@ const handleSubmit = async () => {
 
   return (
     <Modal visible={isVisible} transparent animationType="none">
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
         <Animated.View
           {...panResponder.panHandlers}
           style={[
@@ -192,6 +196,7 @@ const handleSubmit = async () => {
           <ScrollView
             contentContainerStyle={{ paddingBottom: 20 }}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             <TextInput
               style={styles.input}
@@ -289,7 +294,7 @@ const handleSubmit = async () => {
             </TouchableOpacity>
           </ScrollView>
         </Animated.View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
