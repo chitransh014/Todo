@@ -31,7 +31,7 @@ export default function AddTaskModal({
   const slideAnim = useRef(new Animated.Value(0)).current;
   const dragY = useRef(new Animated.Value(0)).current;
 
-  // Animate sheet open/close
+  // Animate modal
   useEffect(() => {
     if (isVisible) {
       Animated.timing(slideAnim, {
@@ -44,7 +44,7 @@ export default function AddTaskModal({
     }
   }, [isVisible]);
 
-  // Set task values
+  // Initialize data for edit or new task
   useEffect(() => {
     if (taskToEdit) {
       setTitle(taskToEdit.title || "");
@@ -53,21 +53,22 @@ export default function AddTaskModal({
       setSubtasks(
         taskToEdit?.subtasks?.length
           ? taskToEdit.subtasks.map((st) => ({
-            title: st.title,
-            completed: st.completed || false,
-          }))
+              title: st.title,
+              completed: st.completed || false,
+            }))
           : [{ title: "", completed: false }]
       );
-
     } else {
       setTitle("");
       setDescription("");
       setDueDate(null);
-      setSubtasks([{ title: "" }]);
+      setSubtasks([{ title: "", completed: false }]);
     }
   }, [taskToEdit, isVisible]);
 
-  const addSubtask = () => setSubtasks([...subtasks, { title: "", completed: false }]);
+  // Handlers
+  const addSubtask = () =>
+    setSubtasks([...subtasks, { title: "", completed: false }]);
 
   const removeSubtask = (index) => {
     setSubtasks(subtasks.filter((_, i) => i !== index));
@@ -79,59 +80,55 @@ export default function AddTaskModal({
     setSubtasks(newSubtasks);
   };
 
-  // ✅ Add this one:
   const toggleSubtaskCompletion = (index) => {
     const updated = [...subtasks];
     updated[index].completed = !updated[index].completed;
     setSubtasks(updated);
   };
 
+  const handleSubmit = async () => {
+    if (!title.trim()) {
+      alert("Please enter a task title");
+      return;
+    }
 
-const handleSubmit = async () => {
-  if (!title.trim()) {
-    alert("Please enter a task title");
-    return;
-  }
+    const filteredSubtasks = subtasks.filter((st) => st.title.trim() !== "");
+    const formattedDate = dueDate ? new Date(dueDate).toISOString() : null;
 
-  const filteredSubtasks = subtasks.filter((st) => st.title.trim() !== "");
-  const formattedDate = dueDate ? dueDate.toISOString() : null;
-
-  try {
-    if (taskToEdit) {
-      await onUpdateTask(taskToEdit.id, {
+    try {
+      const taskData = {
         title,
         description,
         dueDate: formattedDate,
         subtasks: filteredSubtasks,
-        energyLevel: "medium", // ✅ add default
-      });
-    } else {
-      await onAddTask({
-        title,
-        description,
-        dueDate: formattedDate,
-        subtasks: filteredSubtasks,
-        energyLevel: "medium", // ✅ add default
-      });
-    }
-    onClose();
-  } catch (error) {
-    console.error("Add task error:", error);
-    alert("Error saving task. Please try again.");
-  }
-};
+        energyLevel: "medium",
+      };
 
-
-  const onDateChange = (event, selectedDate) => {
-    if (event.type === "set") {
-      // ✅ User picked a date
-      setDueDate(selectedDate);
+      if (taskToEdit) {
+        await onUpdateTask(taskToEdit.id, taskData);
+      } else {
+        await onAddTask(taskData);
+      }
+      onClose();
+    } catch (error) {
+      console.error("Add task error:", error);
+      alert("Error saving task. Please try again.");
     }
-    // ✅ Always close the picker afterward
-    setShowDatePicker(false);
   };
 
-  // 👉 Swipe-down gesture handler
+  // ✅ Fixed date change handler
+  const onDateChange = (event, selectedDate) => {
+    if (Platform.OS === "android") {
+      if (event.type === "set") {
+        setDueDate(selectedDate);
+      }
+      setShowDatePicker(false);
+    } else {
+      setDueDate(selectedDate);
+    }
+  };
+
+  // Swipe-down close gesture
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gesture) => gesture.dy > 10,
@@ -198,6 +195,7 @@ const handleSubmit = async () => {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
+            {/* Title */}
             <TextInput
               style={styles.input}
               placeholder="Task Title"
@@ -206,6 +204,7 @@ const handleSubmit = async () => {
               placeholderTextColor="#888"
             />
 
+            {/* Description */}
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="Description (optional)"
@@ -215,13 +214,16 @@ const handleSubmit = async () => {
               placeholderTextColor="#888"
             />
 
+            {/* Due Date */}
             <TouchableOpacity
               style={[styles.input, styles.datePicker]}
               onPress={() => setShowDatePicker(true)}
             >
               <Ionicons name="calendar-outline" size={18} color="#007BFF" />
               <Text style={{ color: dueDate ? "#000" : "#888", marginLeft: 8 }}>
-                {dueDate ? dueDate.toDateString() : "Select Due Date (optional)"}
+                {dueDate
+                  ? new Date(dueDate).toDateString()
+                  : "Select Due Date (optional)"}
               </Text>
             </TouchableOpacity>
 
@@ -231,58 +233,58 @@ const handleSubmit = async () => {
                 mode="date"
                 display={Platform.OS === "ios" ? "inline" : "default"}
                 onChange={onDateChange}
-                minimumDate={taskToEdit ? null : new Date()}
+                minimumDate={new Date()}
               />
             )}
 
-
+            {/* Subtasks Section */}
             <Text style={styles.subHeader}>Subtasks</Text>
 
             {subtasks.map((subtask, index) => (
-  <View key={index} style={styles.subtaskRow}>
-    {/* Checkbox Icon */}
-    <TouchableOpacity
-      onPress={() => toggleSubtaskCompletion(index)}
-      style={styles.checkbox}
-    >
-      {subtask.completed ? (
-        <Ionicons name="checkmark-circle" size={22} color="#4CAF50" />
-      ) : (
-        <Ionicons name="ellipse-outline" size={22} color="#ccc" />
-      )}
-    </TouchableOpacity>
+              <View key={index} style={styles.subtaskRow}>
+                {/* Checkbox */}
+                <TouchableOpacity
+                  onPress={() => toggleSubtaskCompletion(index)}
+                  style={styles.checkbox}
+                >
+                  {subtask.completed ? (
+                    <Ionicons name="checkmark-circle" size={22} color="#4CAF50" />
+                  ) : (
+                    <Ionicons name="ellipse-outline" size={22} color="#ccc" />
+                  )}
+                </TouchableOpacity>
 
-    {/* Subtask Input */}
-    <TextInput
-      style={[
-        styles.subtaskInput,
-        subtask.completed && { textDecorationLine: "line-through", color: "#999" },
-      ]}
-      placeholder="Subtask"
-      value={subtask.title}
-      onChangeText={(text) => updateSubtask(index, text)}
-      placeholderTextColor="#aaa"
-    />
+                {/* Subtask Input */}
+                <TextInput
+                  style={[
+                    styles.subtaskInput,
+                    subtask.completed && {
+                      textDecorationLine: "line-through",
+                      color: "#999",
+                    },
+                  ]}
+                  placeholder="Add subtask"
+                  value={subtask.title}
+                  onChangeText={(text) => {
+                    updateSubtask(index, text);
+                    // auto add new input when typing last subtask
+                    if (index === subtasks.length - 1 && text.trim().length > 0) {
+                      addSubtask();
+                    }
+                  }}
+                  placeholderTextColor="#aaa"
+                />
 
-    {/* Minimal Cross (instead of trash) */}
-    {subtasks.length > 1 && (
-      <TouchableOpacity onPress={() => removeSubtask(index)}>
-        <Text style={styles.crossIcon}>✕</Text>
-      </TouchableOpacity>
-    )}
-  </View>
-))}
+                {/* Cross Icon */}
+                {subtasks.length > 1 && (
+                  <TouchableOpacity onPress={() => removeSubtask(index)}>
+                    <Text style={styles.crossIcon}>✕</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
 
-            {/* Add Subtask Button */}
-            <TouchableOpacity style={styles.addSubtaskBtn} onPress={addSubtask}>
-              <Ionicons name="add" size={20} color="#007BFF" />
-              <Text style={styles.addSubtaskText}>Add subtask</Text>
-            </TouchableOpacity>
-
-
-
-
-
+            {/* Submit Buttons */}
             <TouchableOpacity style={styles.addBtn} onPress={handleSubmit}>
               <Text style={styles.addBtnText}>
                 {taskToEdit ? "Update Task" : "Add Task"}
@@ -308,7 +310,7 @@ const styles = StyleSheet.create({
   sheet: {
     width: "98%",
     alignSelf: "center",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#fff",
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     paddingHorizontal: 25,
@@ -349,14 +351,6 @@ const styles = StyleSheet.create({
     color: "#2c3e50",
     backgroundColor: "#f8f9fa",
     marginVertical: 8,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   textArea: {
     height: 90,
@@ -366,21 +360,6 @@ const styles = StyleSheet.create({
   datePicker: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#e1e8ed",
-    borderRadius: 15,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    backgroundColor: "#f8f9fa",
-    marginVertical: 8,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   subHeader: {
     fontWeight: "700",
@@ -399,9 +378,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e1e8ed",
   },
-  checkbox: {
-    marginRight: 10,
-  },
+  checkbox: { marginRight: 10 },
   subtaskInput: {
     flex: 1,
     borderBottomWidth: 1,
@@ -409,7 +386,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingVertical: 8,
     color: "#2c3e50",
-    backgroundColor: "transparent",
   },
   crossIcon: {
     fontSize: 20,
@@ -422,33 +398,12 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     paddingVertical: 16,
     marginTop: 25,
-    shadowColor: "#27ae60",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 5,
   },
   addBtnText: {
     color: "#fff",
     textAlign: "center",
     fontSize: 18,
     fontWeight: "bold",
-  },
-  addSubtaskBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 15,
-    marginVertical: 8,
-  },
-  addSubtaskText: {
-    color: "#007BFF",
-    fontSize: 16,
-    fontWeight: "600",
-    marginLeft: 8,
   },
   cancelText: {
     textAlign: "center",

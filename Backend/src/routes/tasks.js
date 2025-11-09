@@ -267,11 +267,12 @@ router.put('/:id', authenticateToken, async (req, res) => {
       });
     }
 
-    const task = await Task.findOneAndUpdate(
-      { _id: id, userId },
-      { $set: { ...updateData } },
-      { new: true }
-    );
+const task = await Task.findOneAndUpdate(
+  { _id: id, userId },
+  { $set: updateData },
+  { new: true }
+);
+
 
     if (!task) {
       return res.status(404).json({ error: 'Task not found' });
