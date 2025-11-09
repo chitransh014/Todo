@@ -15,6 +15,10 @@ export const TaskProvider = ({ children }) => {
     try {
       setLoading(true);
       const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
       const response = await axios.get(`${BASE_URL}/tasks`, {
         headers: { Authorization: `Bearer ${token}` },
       });
