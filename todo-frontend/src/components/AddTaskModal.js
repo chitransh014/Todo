@@ -106,6 +106,7 @@ export default function AddTaskModal({
 
       if (taskToEdit) {
         await onUpdateTask(taskToEdit.id, taskData);
+        setTimeout(onClose,300);
       } else {
         await onAddTask(taskData);
       }

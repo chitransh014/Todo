@@ -15,7 +15,7 @@ export default function Goals({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       fetchTasks(); // refresh every time you come back to this screen
-    }, [fetchTasks])
+    }, [])
   );
 
   const toggleExpanded = (taskId) => {

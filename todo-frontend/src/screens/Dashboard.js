@@ -10,6 +10,13 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import AddTaskModal from "../components/AddTaskModal";
 import { useTasks } from "../context/TaskContext";
+import { useFocusEffect } from '@react-navigation/native';
+
+  // useFocusEffect(
+  //   useCallback(() => {
+  //     fetchTasks(); // refresh every time you come back to this screen
+  //   }, [])
+  // );
 
 const Dashboard = () => {
   const navigation = useNavigation();
