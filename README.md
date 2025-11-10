@@ -5,7 +5,6 @@ A smart task management application that leverages AI to help users break down g
 ## 🚀 Features
 
 ### Core Functionality
-- **AI-Powered Task Breakdown**: Automatically break down goals into manageable tasks using OpenAI's GPT models
 - **Task Management**: Create, update, delete, and track tasks with subtasks
 - **Goal Tracking**: Set and monitor long-term goals with progress visualization
 - **Priority System**: Intelligent task prioritization based on energy levels and deadlines
@@ -62,7 +61,7 @@ A smart task management application that leverages AI to help users break down g
 - MongoDB (local or cloud instance like MongoDB Atlas)
 - npm or yarn package manager
 - Expo CLI (for React Native development)
-- OpenAI API key (optional, for AI features)
+
 
 ## 🔧 Installation
 
@@ -166,9 +165,9 @@ npm test
 ```
 
 ### Manual Testing
-- Use tools like Postman or Insomnia for API testing
+- Use tools like Postman  for API testing
 - Test mobile app on various screen sizes
-- Verify AI task breakdown functionality
+
 
 ## 🚀 Deployment
 
@@ -206,10 +205,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - MongoDB for the robust database solution
 - React Native and Expo for the excellent mobile development experience
 
-## 📞 Support
 
-For questions or issues, please open an issue on GitHub or contact the maintainers.
-
----
-
-**Made with ❤️ for productivity enthusiasts**
