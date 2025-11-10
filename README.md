@@ -1,7 +1,5 @@
 # Todo AI App
 
-A smart task management application that leverages AI to help users break down goals into actionable tasks, track progress, and maintain accountability through shared progress tracking.
-
 ## 🚀 Features
 
 ### Core Functionality
@@ -16,16 +14,10 @@ A smart task management application that leverages AI to help users break down g
 - **Real-time Updates**: Live synchronization between frontend and backend
 - **Offline Support**: Core functionality works without internet connection
 
-### Accountability & Social Features
-- **Accountability Sharing**: Share progress with friends or mentors via email
-- **Progress Tracking**: Monitor completion rates and streaks
-- **Fail Tracking**: Background jobs track missed deadlines and send reminders
-
 ### Technical Features
 - **Secure Authentication**: JWT-based user authentication with bcrypt password hashing
 - **RESTful API**: Well-documented Express.js API with input validation
 - **Database Integration**: MongoDB with Mongoose ODM
-- **Email Notifications**: Automated accountability emails using Nodemailer
 - **Background Processing**: Node-cron for scheduled tasks and reminders
 
 ## 🛠 Tech Stack
@@ -53,7 +45,7 @@ A smart task management application that leverages AI to help users break down g
 - **Linting**: ESLint
 - **Code Formatting**: Prettier
 - **Environment**: dotenv for configuration
-- **Deployment**: Ready for Render/Heroku deployment
+- **Deployment**: Ready for Render deployment
 
 ## 📋 Prerequisites
 
@@ -141,20 +133,12 @@ A smart task management application that leverages AI to help users break down g
 - `DELETE /api/tasks/:id` - Delete task
 - `GET /api/tasks/today` - Get today's prioritized tasks
 
-#### Accountability
-- `POST /api/accountability/share` - Generate accountability share link
-- `GET /api/accountability/view/:token` - View shared accountability (public)
-
-#### Health Check
-- `GET /api/health` - API health status
-
 ### Mobile App Features
 
 1. **Dashboard**: View and manage today's tasks
 2. **Goals Screen**: See all tasks with expandable details
 3. **Add Tasks**: Create new tasks with subtasks
 4. **Authentication**: Login/register screens
-5. **Accountability**: Share progress with others
 
 ## 🧪 Testing
 
@@ -201,8 +185,20 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- OpenAI for providing the AI task breakdown functionality
 - MongoDB for the robust database solution
 - React Native and Expo for the excellent mobile development experience
+
+## 📸 Screenshots
+
+Here are some screenshots of the application:
+
+- Dashboard: ./Screenshots/Dashboard.jpg
+- Login: ./Screenshots/Login.jpg
+- Signup: ./Screenshots/Signup.jpg
+- Add Task 1: ./Screenshots/AddTask1.jpg
+- Add Task 2: ./Screenshots/AddTask2.jpg
+- Edit Task: ./Screenshots/EditTask.jpg
+- Expand Details: ./Screenshots/ExpandDetails.jpg
+- Focus: ./Screenshots/Focus.jpg
 
 
