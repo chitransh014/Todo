@@ -1,5 +1,0 @@
-- [x] Add pickerValue state to AddTaskModal.js
-- [x] Update useEffect to set pickerValue when editing a task
-- [x] Modify date picker button onPress to initialize pickerValue
-- [x] Update onDateChange to set both dueDate and pickerValue
-- [x] Change DateTimePicker value prop to use pickerValue
