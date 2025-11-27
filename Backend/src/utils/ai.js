@@ -4,11 +4,13 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export async function breakdownTask(title, description) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.0-flash",   // ✅ USE GEMINI 2.0 FLASH
+    });
 
     const prompt = `
 Break the following task into 4–7 clear actionable subtasks.
-Return them ONLY as bullet lines. No explanations. No numbering.
+Return ONLY a simple bullet list, no extra text.
 
 Task: ${title}
 Description: ${description || ""}
@@ -19,15 +21,15 @@ Description: ${description || ""}
 
     console.log("AI RAW OUTPUT:", raw);
 
-    // Convert bullet list → array
+    // Convert output to array
     const subtasks = raw
       .split("\n")
-      .map((line) => line.replace(/[-*•]/g, "").trim())
-      .filter((line) => line.length > 0);
+      .map(line => line.replace(/[-*•]/g, "").trim())
+      .filter(line => line.length > 0);
 
     return subtasks;
-  } catch (error) {
-    console.error("AI Breakdown Error:", error);
+  } catch (err) {
+    console.error("AI Breakdown Error:", err);
     return [];
   }
 }
