@@ -4,6 +4,8 @@ import Joi from 'joi';
 import { authenticateToken } from '../middleware/auth.js';
 import Goal from '../models/Goal.js';
 import Task from '../models/Task.js';
+import { breakdownTask } from "../utils/ai.js";
+
 import { calculatePriority } from '../utils/priority.js';
 
 const router = express.Router();
@@ -175,6 +177,22 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Delete task error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+/* ------------------------- AI Breakdown of Task ------------------------- */
+router.post("/ai-breakdown", authenticateToken, async (req, res) => {
+  try {
+    const { title, description } = req.body;
+
+    if (!title) {
+      return res.status(400).json({ error: "Title is required" });
+    }
+
+    const subtasks = await breakdownTask(title, description);
+    return res.json({ subtasks });
+  } catch (error) {
+    console.error("AI Breakdown Route Error:", error);
+    return res.status(500).json({ error: "AI Breakdown failed" });
   }
 });
 
