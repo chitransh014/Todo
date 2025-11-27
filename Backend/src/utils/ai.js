@@ -7,20 +7,25 @@ export async function breakdownTask(title, description) {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
-Break the following task into actionable subtasks.
-Return ONLY a JSON array of short subtasks.
+Break the following task into 4–7 clear actionable subtasks.
+Return them ONLY as bullet lines. No explanations. No numbering.
 
-Example output:
-["Define requirements", "Create UI screens", "Setup backend API"]
-
-Task Title: ${title}
-Task Description: ${description || "No Description"}
+Task: ${title}
+Description: ${description || ""}
 `;
 
     const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const raw = result.response.text();
 
-    return JSON.parse(text);
+    console.log("AI RAW OUTPUT:", raw);
+
+    // Convert bullet list → array
+    const subtasks = raw
+      .split("\n")
+      .map((line) => line.replace(/[-*•]/g, "").trim())
+      .filter((line) => line.length > 0);
+
+    return subtasks;
   } catch (error) {
     console.error("AI Breakdown Error:", error);
     return [];

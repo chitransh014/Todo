@@ -6,22 +6,17 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
+  AsyncStorage,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import AddTaskModal from "../components/AddTaskModal";
 import { useTasks } from "../context/TaskContext";
-import { useFocusEffect } from '@react-navigation/native';
 
-  // useFocusEffect(
-  //   useCallback(() => {
-  //     fetchTasks(); // refresh every time you come back to this screen
-  //   }, [])
-  // );
+
 
 const Dashboard = () => {
   const navigation = useNavigation();
   const { tasks, addTask, updateTask, deleteTask } = useTasks();
-  const [name, setName] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   const updateTaskStatus = (taskId, newStatus) => {
@@ -38,6 +33,22 @@ const Dashboard = () => {
       },
     ]);
   };
+
+  // // ✅ TOKEN DEBUGGER (NEW)
+  // const showToken = async () => {
+  //   try {
+  //     const token = await AsyncStorage.getItem("token");
+  //     if (!token) {
+  //       Alert.alert("No Token Found");
+  //       return;
+  //     }
+  //     console.log("JWT TOKEN:", token);
+  //     Alert.alert("Your Token", token);
+  //   } catch (err) {
+  //     console.log(err);
+  //     Alert.alert("Error fetching token");
+  //   }
+  // };
 
   const renderTask = ({ item }) => (
     <View style={styles.taskItem}>
@@ -68,8 +79,8 @@ const Dashboard = () => {
 
   return (
     <View style={styles.container}>
-      {/* <Text style={styles.greeting}> {name}</Text> */}
       <Text style={styles.sectionTitle}>Today's Tasks</Text>
+
       <FlatList
         data={tasks}
         keyExtractor={(item) => item.id.toString()}
@@ -79,12 +90,18 @@ const Dashboard = () => {
         }
       />
 
+      {/* ➕ ADD TASK BUTTON */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => setIsModalVisible(true)}
       >
         <Text style={{ fontSize: 28, color: "white" }}>+</Text>
       </TouchableOpacity>
+
+      {/* 🟡 TOKEN DEBUG BUTTON (NEW)
+      <TouchableOpacity style={styles.debugButton} onPress={showToken}>
+        <Text style={{ color: "white", fontWeight: "bold" }}>Token</Text>
+      </TouchableOpacity> */}
 
       <AddTaskModal
         isVisible={isModalVisible}
@@ -101,12 +118,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
     padding: 20,
   },
-  greeting: {
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 20,
-    color: '#2c3e50',
-  },
   sectionTitle: {
     fontSize: 24,
     fontWeight: "bold",
@@ -121,13 +132,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "#e1e8ed",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
     elevation: 3,
   },
   taskContent: { flex: 1 },
@@ -135,13 +139,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: '#2c3e50',
-    marginBottom: 4,
   },
   taskDescription: {
     fontSize: 14,
     color: "#7f8c8d",
     marginTop: 5,
-    lineHeight: 20,
   },
   taskActions: {
     flexDirection: "row",
@@ -153,31 +155,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 20,
     marginLeft: 10,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
   },
   completeButton: {
     backgroundColor: "#27ae60",
-    shadowColor: "#27ae60",
   },
   deleteButton: {
     backgroundColor: "#e74c3c",
-    shadowColor: "#e74c3c",
   },
   buttonText: {
     color: "white",
     fontSize: 14,
-    fontWeight: '600',
   },
   emptyText: {
     textAlign: "center",
-    fontStyle: "italic",
     color: "#95a5a6",
     marginTop: 40,
     fontSize: 16,
@@ -193,14 +183,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     elevation: 8,
-    shadowColor: "#85c1e9",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
   },
+
+  // // 🟡 NEW BUTTON STYLE
+  // debugButton: {
+  //   position: "absolute",
+  //   bottom: 110,
+  //   right: 20,
+  //   backgroundColor: "#333",
+  //   paddingVertical: 10,
+  //   paddingHorizontal: 15,
+  //   borderRadius: 10,
+  //   elevation: 5,
+  // },
 });
 
 export default Dashboard;
