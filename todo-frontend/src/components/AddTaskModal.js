@@ -14,6 +14,9 @@ import {
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { BASE_URL } from "../api/auth";
 
 export default function AddTaskModal({
   isVisible,
@@ -25,13 +28,15 @@ export default function AddTaskModal({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState(null);
+  const [pickerValue, setPickerValue] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [subtasks, setSubtasks] = useState([{ title: "", completed: false }]);
+  const [loadingAI, setLoadingAI] = useState(false);
 
   const slideAnim = useRef(new Animated.Value(0)).current;
   const dragY = useRef(new Animated.Value(0)).current;
 
-  // Animate modal
+  // Animate modal open/close
   useEffect(() => {
     if (isVisible) {
       Animated.timing(slideAnim, {
@@ -44,14 +49,15 @@ export default function AddTaskModal({
     }
   }, [isVisible]);
 
-  // Initialize data for edit or new task
+  // Set initial values when editing
   useEffect(() => {
     if (taskToEdit) {
       setTitle(taskToEdit.title || "");
       setDescription(taskToEdit.description || "");
       setDueDate(taskToEdit.dueDate ? new Date(taskToEdit.dueDate) : null);
+      setPickerValue(taskToEdit.dueDate ? new Date(taskToEdit.dueDate) : new Date());
       setSubtasks(
-        taskToEdit?.subtasks?.length
+        taskToEdit.subtasks?.length
           ? taskToEdit.subtasks.map((st) => ({
               title: st.title,
               completed: st.completed || false,
@@ -62,11 +68,12 @@ export default function AddTaskModal({
       setTitle("");
       setDescription("");
       setDueDate(null);
+      setPickerValue(new Date());
       setSubtasks([{ title: "", completed: false }]);
     }
   }, [taskToEdit, isVisible]);
 
-  // Handlers
+  // Subtask actions
   const addSubtask = () =>
     setSubtasks([...subtasks, { title: "", completed: false }]);
 
@@ -75,9 +82,9 @@ export default function AddTaskModal({
   };
 
   const updateSubtask = (index, title) => {
-    const newSubtasks = [...subtasks];
-    newSubtasks[index].title = title;
-    setSubtasks(newSubtasks);
+    const updated = [...subtasks];
+    updated[index].title = title;
+    setSubtasks(updated);
   };
 
   const toggleSubtaskCompletion = (index) => {
@@ -86,71 +93,92 @@ export default function AddTaskModal({
     setSubtasks(updated);
   };
 
-  const handleSubmit = async () => {
+  // AI SUBTASK GENERATOR
+  const generateAISubtasks = async () => {
     if (!title.trim()) {
-      alert("Please enter a task title");
+      alert("Enter a task title before using AI.");
       return;
     }
 
-    const filteredSubtasks = subtasks.filter((st) => st.title.trim() !== "");
-    const formattedDate = dueDate ? new Date(dueDate).toISOString() : null;
-
     try {
-      const taskData = {
-        title,
-        description,
-        dueDate: formattedDate,
-        subtasks: filteredSubtasks,
-        energyLevel: "medium",
-      };
+      setLoadingAI(true);
+      const token = await AsyncStorage.getItem("token");
 
-      if (taskToEdit) {
-        await onUpdateTask(taskToEdit.id, taskData);
-        setTimeout(onClose,300);
-      } else {
-        await onAddTask(taskData);
-      }
-      onClose();
+      const response = await axios.post(
+        `${BASE_URL}/tasks/ai-breakdown`,
+        { title, description },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const aiList = response.data.subtasks.map((t) => ({
+        title: t,
+        completed: false,
+      }));
+
+      setSubtasks(aiList);
     } catch (error) {
-      console.error("Add task error:", error);
-      alert("Error saving task. Please try again.");
+      console.error("AI Breakdown Error:", error);
+      alert("AI failed to generate subtasks.");
+    } finally {
+      setLoadingAI(false);
     }
   };
 
-  // ✅ Fixed date change handler
+  // On date choose
   const onDateChange = (event, selectedDate) => {
-    if (Platform.OS === "android") {
-      if (event.type === "set") {
-        setDueDate(selectedDate);
-      }
-      setShowDatePicker(false);
-    } else {
+    if (event.type === "set") {
       setDueDate(selectedDate);
     }
+    setShowDatePicker(false);
   };
 
-  // Swipe-down close gesture
+  // Submit
+  const handleSubmit = async () => {
+    if (!title.trim()) {
+      return alert("Please enter a task title");
+    }
+
+    const finalDate = dueDate ? new Date(dueDate).toISOString() : null;
+    const cleanSubtasks = subtasks.filter((s) => s.title.trim() !== "");
+
+    try {
+      if (taskToEdit) {
+        await onUpdateTask(taskToEdit.id, {
+          title,
+          description,
+          dueDate: finalDate,
+          subtasks: cleanSubtasks,
+        });
+      } else {
+        await onAddTask({
+          title,
+          description,
+          dueDate: finalDate,
+          subtasks: cleanSubtasks,
+        });
+      }
+      onClose();
+    } catch (err) {
+      alert("Error saving task.");
+    }
+  };
+
+  // Close swipe-down gesture
   const panResponder = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gesture) => gesture.dy > 10,
-      onPanResponderMove: (_, gesture) => {
-        if (gesture.dy > 0) dragY.setValue(gesture.dy);
+      onMoveShouldSetPanResponder: (_, g) => g.dy > 10,
+      onPanResponderMove: (_, g) => {
+        if (g.dy > 0) dragY.setValue(g.dy);
       },
-      onPanResponderRelease: (_, gesture) => {
-        if (gesture.dy > 120) {
+      onPanResponderRelease: (_, g) => {
+        if (g.dy > 120) {
           Animated.timing(slideAnim, {
             toValue: 0,
             duration: 200,
             useNativeDriver: true,
-          }).start(() => {
-            dragY.setValue(0);
-            onClose();
-          });
+          }).start(() => onClose());
         } else {
-          Animated.spring(dragY, {
-            toValue: 0,
-            useNativeDriver: true,
-          }).start();
+          Animated.spring(dragY, { toValue: 0, useNativeDriver: true }).start();
         }
       },
     })
@@ -173,7 +201,7 @@ export default function AddTaskModal({
                     dragY,
                     slideAnim.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [500, 0],
+                      outputRange: [600, 0],
                     })
                   ),
                 },
@@ -181,7 +209,6 @@ export default function AddTaskModal({
             },
           ]}
         >
-          {/* Handle Bar */}
           <View style={styles.handleBar} />
 
           <View style={styles.headerRow}>
@@ -191,18 +218,13 @@ export default function AddTaskModal({
             </Text>
           </View>
 
-          <ScrollView
-            contentContainerStyle={{ paddingBottom: 20 }}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
+          <ScrollView showsVerticalScrollIndicator={false}>
             {/* Title */}
             <TextInput
               style={styles.input}
               placeholder="Task Title"
               value={title}
               onChangeText={setTitle}
-              placeholderTextColor="#888"
             />
 
             {/* Description */}
@@ -212,71 +234,70 @@ export default function AddTaskModal({
               value={description}
               onChangeText={setDescription}
               multiline
-              placeholderTextColor="#888"
             />
 
-            {/* Due Date */}
+            {/* Date Picker */}
             <TouchableOpacity
               style={[styles.input, styles.datePicker]}
-              onPress={() => setShowDatePicker(true)}
+              onPress={() => {
+                setPickerValue(dueDate || new Date());
+                setShowDatePicker(true);
+              }}
             >
               <Ionicons name="calendar-outline" size={18} color="#007BFF" />
-              <Text style={{ color: dueDate ? "#000" : "#888", marginLeft: 8 }}>
-                {dueDate
-                  ? new Date(dueDate).toDateString()
-                  : "Select Due Date (optional)"}
+              <Text style={{ marginLeft: 8 }}>
+                {dueDate ? dueDate.toDateString() : "Select Due Date"}
               </Text>
             </TouchableOpacity>
 
             {showDatePicker && (
               <DateTimePicker
-                value={dueDate || new Date()}
+                value={pickerValue}
                 mode="date"
-                display={Platform.OS === "ios" ? "inline" : "default"}
+                display="default"
                 onChange={onDateChange}
                 minimumDate={new Date()}
               />
             )}
 
-            {/* Subtasks Section */}
+            {/* AI BUTTON INSIDE SUBTASK SECTION */}
             <Text style={styles.subHeader}>Subtasks</Text>
 
-            {subtasks.map((subtask, index) => (
+            <TouchableOpacity
+              style={styles.aiButton}
+              onPress={generateAISubtasks}
+              disabled={loadingAI}
+            >
+              {loadingAI ? (
+                <Text style={{ color: "#fff" }}>Generating...</Text>
+              ) : (
+                <>
+                  <Ionicons name="sparkles-outline" size={20} color="#fff" />
+                  <Text style={styles.aiButtonText}>Generate with AI</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {/* Subtask List */}
+            {subtasks.map((sub, index) => (
               <View key={index} style={styles.subtaskRow}>
-                {/* Checkbox */}
                 <TouchableOpacity
                   onPress={() => toggleSubtaskCompletion(index)}
-                  style={styles.checkbox}
                 >
-                  {subtask.completed ? (
+                  {sub.completed ? (
                     <Ionicons name="checkmark-circle" size={22} color="#4CAF50" />
                   ) : (
                     <Ionicons name="ellipse-outline" size={22} color="#ccc" />
                   )}
                 </TouchableOpacity>
 
-                {/* Subtask Input */}
                 <TextInput
-                  style={[
-                    styles.subtaskInput,
-                    subtask.completed && {
-                      textDecorationLine: "line-through",
-                      color: "#999",
-                    },
-                  ]}
-                  placeholder="Add subtask"
-                  value={subtask.title}
-                  onChangeText={(text) => {
-                    updateSubtask(index, text);
-                    // auto add new input when typing last subtask
-                    if (index === subtasks.length - 1 && text.trim().length > 0) {
-                      addSubtask();
-                    }
-                  }}
-                  placeholderTextColor="#aaa"
+                  style={[styles.subtaskInput]}
+                  placeholder="Subtask"
+                  value={sub.title}
+                  onChangeText={(text) => updateSubtask(index, text)}
                 />
 
-                {/* Cross Icon */}
                 {subtasks.length > 1 && (
                   <TouchableOpacity onPress={() => removeSubtask(index)}>
                     <Text style={styles.crossIcon}>✕</Text>
@@ -285,9 +306,14 @@ export default function AddTaskModal({
               </View>
             ))}
 
-            {/* Submit Buttons */}
-            <TouchableOpacity style={styles.addBtn} onPress={handleSubmit}>
-              <Text style={styles.addBtnText}>
+            <TouchableOpacity style={styles.addSubtaskBtn} onPress={addSubtask}>
+              <Ionicons name="add" size={20} color="#007BFF" />
+              <Text style={styles.addSubtaskText}>Add another subtask</Text>
+            </TouchableOpacity>
+
+            {/* Save */}
+            <TouchableOpacity style={styles.saveBtn} onPress={handleSubmit}>
+              <Text style={styles.saveBtnText}>
                 {taskToEdit ? "Update Task" : "Add Task"}
               </Text>
             </TouchableOpacity>
@@ -309,108 +335,110 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.6)",
   },
   sheet: {
-    width: "98%",
+    width: "95%",
     alignSelf: "center",
     backgroundColor: "#fff",
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    paddingHorizontal: 25,
-    paddingTop: 15,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    padding: 20,
     maxHeight: "85%",
-    elevation: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
   },
   handleBar: {
-    width: 60,
-    height: 6,
-    backgroundColor: "#bdc3c7",
-    borderRadius: 3,
+    width: 50,
+    height: 5,
+    backgroundColor: "#ccc",
+    borderRadius: 5,
     alignSelf: "center",
-    marginVertical: 10,
+    marginBottom: 10,
   },
   headerRow: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "center",
-    marginBottom: 15,
+    marginBottom: 10,
   },
   headerText: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#3498db",
-    marginLeft: 8,
+    fontSize: 20,
+    fontWeight: "bold",
+    marginLeft: 6,
+    color: "#007BFF",
   },
   input: {
-    borderWidth: 2,
-    borderColor: "#e1e8ed",
-    borderRadius: 15,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: "#2c3e50",
-    backgroundColor: "#f8f9fa",
-    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 10,
+    backgroundColor: "#f8f8f8",
   },
   textArea: {
-    height: 90,
+    height: 80,
     textAlignVertical: "top",
-    paddingTop: 12,
   },
   datePicker: {
     flexDirection: "row",
     alignItems: "center",
   },
   subHeader: {
-    fontWeight: "700",
-    fontSize: 18,
-    marginTop: 20,
-    marginBottom: 10,
-    color: "#34495e",
+    fontSize: 17,
+    fontWeight: "600",
+    marginBottom: 6,
+  },
+  aiButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#6C63FF",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 12,
+    justifyContent: "center",
+  },
+  aiButtonText: {
+    color: "#fff",
+    marginLeft: 6,
+    fontWeight: "600",
   },
   subtaskRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 8,
-    backgroundColor: "#f8f9fa",
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#e1e8ed",
+    marginBottom: 8,
+    backgroundColor: "#f8f8f8",
+    padding: 10,
+    borderRadius: 10,
   },
-  checkbox: { marginRight: 10 },
   subtaskInput: {
     flex: 1,
-    borderBottomWidth: 1,
-    borderColor: "#bdc3c7",
-    fontSize: 16,
-    paddingVertical: 8,
-    color: "#2c3e50",
+    marginLeft: 10,
   },
   crossIcon: {
     fontSize: 20,
     color: "#e74c3c",
     marginLeft: 10,
-    fontWeight: "bold",
   },
-  addBtn: {
-    backgroundColor: "#27ae60",
-    borderRadius: 15,
-    paddingVertical: 16,
-    marginTop: 25,
+  addSubtaskBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 10,
   },
-  addBtnText: {
+  addSubtaskText: {
+    marginLeft: 8,
+    color: "#007BFF",
+    fontWeight: "600",
+  },
+  saveBtn: {
+    backgroundColor: "#007BFF",
+    padding: 14,
+    borderRadius: 12,
+    marginTop: 15,
+  },
+  saveBtnText: {
     color: "#fff",
+    fontWeight: "700",
     textAlign: "center",
-    fontSize: 18,
-    fontWeight: "bold",
   },
   cancelText: {
     textAlign: "center",
-    fontSize: 16,
     color: "#e74c3c",
-    fontWeight: "600",
     marginTop: 15,
+    fontSize: 16,
   },
 });
