@@ -1,26 +1,20 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// AI function: Breakdown goal into subtasks
-export async function breakGoalIntoSubtasks(goalTitle, goalDescription = "") {
+export async function breakdownTask(title, description) {
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
-Break this goal into 5-8 short, clear subtasks.
-Goal: "${goalTitle}"
-Description: "${goalDescription || 'N/A'}"
+Break the following task into actionable subtasks.
+Return ONLY a JSON array of short subtasks.
 
-Return ONLY a JSON array like:
-[
-  {"title": "Do something"},
-  {"title": "Next step"},
-  {"title": "Another step"}
-]
+Example output:
+["Define requirements", "Create UI screens", "Setup backend API"]
+
+Task Title: ${title}
+Task Description: ${description || "No Description"}
 `;
 
     const result = await model.generateContent(prompt);
@@ -28,7 +22,7 @@ Return ONLY a JSON array like:
 
     return JSON.parse(text);
   } catch (error) {
-    console.error("Gemini Breakdown Error:", error);
-    return []; // fallback
+    console.error("AI Breakdown Error:", error);
+    return [];
   }
 }
