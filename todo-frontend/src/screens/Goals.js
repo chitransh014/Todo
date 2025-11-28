@@ -48,7 +48,7 @@ export default function Goals({ navigation }) {
               {item.description || 'No description'}
             </Text>
             <Text style={styles.taskStatus}>
-              {item.dueDate ? `Due: ${new Date(item.dueDate).toDateString()}` : "No due date"}
+              {item.dueDate ? `Due: ${new Date(item.dueDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}` : "No due date"}
             </Text>
             {item.subtasks && item.subtasks.length > 0 && (
               <Text style={styles.subtaskCount}>
@@ -77,7 +77,7 @@ export default function Goals({ navigation }) {
               <Text style={styles.label}>Status: </Text>{item.status}
             </Text>
             <Text style={styles.expandedText}>
-              <Text style={styles.label}>Due Date: </Text>{item.dueDate ? new Date(item.dueDate).toDateString() : 'No due date'}
+              <Text style={styles.label}>Due Date: </Text>{item.dueDate ? new Date(item.dueDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'No due date'}
             </Text>
             {item.subtasks && item.subtasks.length > 0 && (
               <View style={styles.subtasksSection}>

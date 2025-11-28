@@ -166,7 +166,7 @@ export default function TaskDetail({ route, navigation }) {
 
       <Text style={styles.label}>Due Date</Text>
       <Text style={styles.value}>
-        {task.dueDate ? new Date(task.dueDate).toDateString() : 'No due date set'}
+        {task.dueDate ? new Date(task.dueDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'No due date set'}
       </Text>
 
 

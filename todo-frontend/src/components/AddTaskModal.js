@@ -32,6 +32,9 @@ export default function AddTaskModal({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [subtasks, setSubtasks] = useState([{ title: "", completed: false }]);
   const [loadingAI, setLoadingAI] = useState(false);
+  const [dueTime, setDueTime] = useState(null);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
 
   const slideAnim = useRef(new Animated.Value(0)).current;
   const dragY = useRef(new Animated.Value(0)).current;
@@ -54,8 +57,16 @@ export default function AddTaskModal({
     if (taskToEdit) {
       setTitle(taskToEdit.title || "");
       setDescription(taskToEdit.description || "");
-      setDueDate(taskToEdit.dueDate ? new Date(taskToEdit.dueDate) : null);
-      setPickerValue(taskToEdit.dueDate ? new Date(taskToEdit.dueDate) : new Date());
+      if (taskToEdit.dueDate) {
+        const dueDateTime = new Date(taskToEdit.dueDate);
+        setDueDate(new Date(dueDateTime.getFullYear(), dueDateTime.getMonth(), dueDateTime.getDate()));
+        setDueTime(new Date(dueDateTime.getFullYear(), dueDateTime.getMonth(), dueDateTime.getDate(), dueDateTime.getHours(), dueDateTime.getMinutes()));
+        setPickerValue(dueDateTime);
+      } else {
+        setDueDate(null);
+        setDueTime(null);
+        setPickerValue(new Date());
+      }
       setSubtasks(
         taskToEdit.subtasks?.length
           ? taskToEdit.subtasks.map((st) => ({
@@ -68,6 +79,7 @@ export default function AddTaskModal({
       setTitle("");
       setDescription("");
       setDueDate(null);
+      setDueTime(null);
       setPickerValue(new Date());
       setSubtasks([{ title: "", completed: false }]);
     }
@@ -138,7 +150,18 @@ export default function AddTaskModal({
       return alert("Please enter a task title");
     }
 
-    const finalDate = dueDate ? new Date(dueDate).toISOString() : null;
+    let finalDueDate = null;
+    if (dueDate) {
+      const date = new Date(dueDate);
+      if (dueTime) {
+        const time = new Date(dueTime);
+        date.setHours(time.getHours(), time.getMinutes(), 0, 0);
+      } else {
+        date.setHours(23, 59, 59, 999);
+      }
+      finalDueDate = date.toISOString();
+    }
+
     const cleanSubtasks = subtasks.filter((s) => s.title.trim() !== "");
 
     try {
@@ -146,14 +169,14 @@ export default function AddTaskModal({
         await onUpdateTask(taskToEdit.id, {
           title,
           description,
-          dueDate: finalDate,
+          dueDate: finalDueDate,
           subtasks: cleanSubtasks,
         });
       } else {
         await onAddTask({
           title,
           description,
-          dueDate: finalDate,
+          dueDate: finalDueDate,
           subtasks: cleanSubtasks,
         });
       }
@@ -257,6 +280,32 @@ export default function AddTaskModal({
                 display="default"
                 onChange={onDateChange}
                 minimumDate={new Date()}
+              />
+            )}
+
+            {/* Time Picker */}
+            <TouchableOpacity
+              style={[styles.input, styles.datePicker]}
+              onPress={() => setShowTimePicker(true)}
+            >
+              <Ionicons name="time-outline" size={18} color="#007BFF" />
+              <Text style={{ color: dueTime ? "#000" : "#888", marginLeft: 8 }}>
+                {dueTime ? dueTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Select Time (optional)"}
+              </Text>
+            </TouchableOpacity>
+
+            {showTimePicker && (
+              <DateTimePicker
+                value={dueTime || new Date()}
+                mode="time"
+                is24Hour={false}
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={(event, selectedTime) => {
+                  if (event.type === "set") {
+                    setDueTime(selectedTime);
+                  }
+                  setShowTimePicker(false);
+                }}
               />
             )}
 
@@ -386,7 +435,7 @@ const styles = StyleSheet.create({
   aiButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#6C63FF",
+    backgroundColor: "#007BFF",
     padding: 12,
     borderRadius: 10,
     marginBottom: 12,
