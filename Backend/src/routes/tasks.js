@@ -224,6 +224,61 @@ router.get('/today', authenticateToken, async (req, res) => {
     console.error('Get today tasks error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
+
+  
 });
+/* ------------------------- Learning Stats ------------------------- */
+
+router.get('/learning/stats', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const tasks = await Task.find({ userId });
+
+    // Completed tasks count
+    const completedTasks = tasks.filter(t => t.status === "completed").length;
+
+    // Total time spent (if you want, you can store duration field later)
+    const totalTimeSpent = tasks
+      .filter(t => t.status === "completed")
+      .reduce((sum, t) => sum + (t.duration || 0), 0);
+
+    // Category progress
+    const progress = {};
+    tasks.forEach(task => {
+      const cat = task.energyLevel || "General"; // grouping by energyLevel for now
+      if (!progress[cat]) progress[cat] = { done: 0, total: 0 };
+      progress[cat].total += 1;
+      if (task.status === "completed") progress[cat].done += 1;
+    });
+
+    // Convert to %
+    const progressPercent = {};
+    for (const cat in progress) {
+      progressPercent[cat] =
+        progress[cat].total === 0
+          ? 0
+          : Math.round((progress[cat].done / progress[cat].total) * 100);
+    }
+
+    // Recent completed tasks
+    const recentCompleted = tasks
+      .filter(t => t.status === "completed")
+      .slice(-5)
+      .reverse();
+
+    res.json({
+      completedTasks,
+      timeSpent: Math.round(totalTimeSpent / 60), // optional conversion
+      progress: progressPercent,
+      recentCompleted,
+    });
+
+  } catch (error) {
+    console.error("Learning stats error:", error);
+    res.status(500).json({ error: "Failed to fetch learning stats" });
+  }
+});
+
 
 export default router;

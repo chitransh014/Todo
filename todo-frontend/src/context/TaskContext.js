@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { BASE_URL } from '../api/auth';
+import * as Notifications from 'expo-notifications';
 
 const TaskContext = createContext();
 
@@ -67,6 +68,10 @@ export const TaskProvider = ({ children }) => {
   const deleteTask = async (taskId) => {
     try {
       const token = await AsyncStorage.getItem('token');
+      const task = tasks.find((t) => t.id === taskId);
+      if (task && task.notificationId) {
+        await Notifications.cancelScheduledNotificationAsync(task.notificationId);
+      }
       await axios.delete(`${BASE_URL}/tasks/${taskId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });

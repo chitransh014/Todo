@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BASE_URL } from "../api/auth";
+import * as Notifications from "expo-notifications";
 
 export default function AddTaskModal({
   isVisible,
@@ -164,13 +165,35 @@ export default function AddTaskModal({
 
     const cleanSubtasks = subtasks.filter((s) => s.title.trim() !== "");
 
+    let notificationId = null;
+    if (finalDueDate) {
+      const triggerDate = new Date(finalDueDate);
+
+      notificationId = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "⏰ Task Reminder",
+          body: `Don't forget: ${title}`,
+          sound: true,
+        },
+        trigger: triggerDate,
+      });
+
+      console.log("Notification Scheduled with ID:", notificationId);
+    }
+
     try {
       if (taskToEdit) {
+        // Cancel old notification
+        if (taskToEdit.notificationId) {
+          await Notifications.cancelScheduledNotificationAsync(taskToEdit.notificationId);
+        }
+
         await onUpdateTask(taskToEdit.id, {
           title,
           description,
           dueDate: finalDueDate,
           subtasks: cleanSubtasks,
+          notificationId,
         });
       } else {
         await onAddTask({
@@ -178,6 +201,7 @@ export default function AddTaskModal({
           description,
           dueDate: finalDueDate,
           subtasks: cleanSubtasks,
+          notificationId,
         });
       }
       onClose();
