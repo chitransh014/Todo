@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../api/auth';
-import { useTasks } from '../context/TaskContext';
 
 export default function TaskDetail({ route, navigation }) {
-  const { taskId } = route.params; // ✅ received from navigation
+  const { taskId } = route.params;
   const [task, setTask] = useState(null);
   const [subtasks, setSubtasks] = useState([]);
   const [newSubtask, setNewSubtask] = useState('');
@@ -16,7 +15,7 @@ export default function TaskDetail({ route, navigation }) {
   const [editingTitle, setEditingTitle] = useState('');
   const [showAddSubtask, setShowAddSubtask] = useState(false);
 
-  // 🔹 Fetch Task Details
+  /* ------------------- Fetch Task Details ------------------- */
   const fetchTask = async () => {
     try {
       setLoading(true);
@@ -24,6 +23,7 @@ export default function TaskDetail({ route, navigation }) {
       const res = await axios.get(`${BASE_URL}/tasks/${taskId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       setTask(res.data.task);
       setSubtasks(res.data.task.subtasks || []);
     } catch (error) {
@@ -38,7 +38,7 @@ export default function TaskDetail({ route, navigation }) {
     fetchTask();
   }, []);
 
-  // 🔹 Add Subtask
+  /* ------------------- Add Subtask ------------------- */
   const addSubtask = async () => {
     if (!newSubtask.trim()) return;
     try {
@@ -48,6 +48,7 @@ export default function TaskDetail({ route, navigation }) {
         { title: newSubtask },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
       setSubtasks([...subtasks, res.data.subtask]);
       setNewSubtask('');
     } catch (error) {
@@ -56,10 +57,14 @@ export default function TaskDetail({ route, navigation }) {
     }
   };
 
-  // 🔹 Toggle Subtask Completion
+  /* ------------------- Toggle Subtask Completion ------------------- */
   const toggleSubtask = async (subtaskId, currentCompleted) => {
-    // Optimistic update
-    setSubtasks(subtasks.map(st => st.id === subtaskId ? { ...st, completed: !currentCompleted } : st));
+    // Optimistic UI update
+    setSubtasks(
+      subtasks.map(st =>
+        st._id === subtaskId ? { ...st, completed: !currentCompleted } : st
+      )
+    );
 
     try {
       const token = await AsyncStorage.getItem('token');
@@ -70,13 +75,17 @@ export default function TaskDetail({ route, navigation }) {
       );
     } catch (error) {
       console.error('Toggle subtask error:', error);
-      // Revert optimistic update on error
-      setSubtasks(subtasks.map(st => st.id === subtaskId ? { ...st, completed: currentCompleted } : st));
+      // Rollback
+      setSubtasks(
+        subtasks.map(st =>
+          st._id === subtaskId ? { ...st, completed: currentCompleted } : st
+        )
+      );
       Alert.alert('Error', 'Failed to toggle subtask.');
     }
   };
 
-  // 🔹 Edit Subtask Title
+  /* ------------------- Edit Subtask Title ------------------- */
   const startEditing = (subtaskId, currentTitle) => {
     setEditingSubtaskId(subtaskId);
     setEditingTitle(currentTitle);
@@ -84,6 +93,7 @@ export default function TaskDetail({ route, navigation }) {
 
   const saveEdit = async () => {
     if (!editingTitle.trim()) return;
+
     try {
       const token = await AsyncStorage.getItem('token');
       await axios.put(
@@ -91,12 +101,18 @@ export default function TaskDetail({ route, navigation }) {
         { title: editingTitle },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setSubtasks(subtasks.map(st => st.id === editingSubtaskId ? { ...st, title: editingTitle } : st));
+
+      setSubtasks(
+        subtasks.map(st =>
+          st._id === editingSubtaskId ? { ...st, title: editingTitle } : st
+        )
+      );
+
       setEditingSubtaskId(null);
       setEditingTitle('');
     } catch (error) {
       console.error('Edit subtask error:', error);
-      Alert.alert('Error', 'Failed to edit subtask.');
+      Alert.alert('Error', 'Failed to update subtask.');
     }
   };
 
@@ -105,7 +121,7 @@ export default function TaskDetail({ route, navigation }) {
     setEditingTitle('');
   };
 
-  // 🔹 Delete Subtask
+  /* ------------------- Delete Subtask ------------------- */
   const deleteSubtask = async (subtaskId) => {
     Alert.alert(
       'Delete Subtask',
@@ -122,7 +138,8 @@ export default function TaskDetail({ route, navigation }) {
                 `${BASE_URL}/tasks/${taskId}/subtasks/${subtaskId}`,
                 { headers: { Authorization: `Bearer ${token}` } }
               );
-              setSubtasks(subtasks.filter(st => st.id !== subtaskId));
+
+              setSubtasks(subtasks.filter(st => st._id !== subtaskId));
             } catch (error) {
               console.error('Delete subtask error:', error);
               Alert.alert('Error', 'Failed to delete subtask.');
@@ -133,7 +150,7 @@ export default function TaskDetail({ route, navigation }) {
     );
   };
 
-  // 🔹 Mark Task Complete
+  /* ------------------- Mark Task Completed ------------------- */
   const markComplete = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
@@ -142,6 +159,7 @@ export default function TaskDetail({ route, navigation }) {
         { status: 'completed' },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
       Alert.alert('Task Completed 🎉');
       navigation.goBack();
     } catch (error) {
@@ -155,6 +173,7 @@ export default function TaskDetail({ route, navigation }) {
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>{task.title}</Text>
 
+      {/* Details */}
       <Text style={styles.label}>Details</Text>
       <TextInput
         style={styles.input}
@@ -164,27 +183,44 @@ export default function TaskDetail({ route, navigation }) {
         multiline
       />
 
+      {/* Due Date */}
       <Text style={styles.label}>Due Date</Text>
       <Text style={styles.value}>
-        {task.dueDate ? new Date(task.dueDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'No due date set'}
+        {task.dueDate
+          ? new Date(task.dueDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
+          : 'No due date set'}
       </Text>
 
-
-
-      <TouchableOpacity onPress={() => setShowAddSubtask(!showAddSubtask)} style={styles.addSubtaskHeader}>
+      {/* Subtasks Section */}
+      <TouchableOpacity
+        onPress={() => setShowAddSubtask(!showAddSubtask)}
+        style={styles.addSubtaskHeader}
+      >
         <Text style={styles.label}>Subtasks</Text>
-        <Ionicons name={showAddSubtask ? 'chevron-up' : 'chevron-down'} size={20} color="#555" />
+        <Ionicons
+          name={showAddSubtask ? 'chevron-up' : 'chevron-down'}
+          size={20}
+          color="#555"
+        />
       </TouchableOpacity>
+
       {subtasks.map((st) => (
-        <View key={st.id} style={styles.subtaskItem}>
-          <TouchableOpacity onPress={() => toggleSubtask(st.id, st.completed)} style={styles.checkboxContainer}>
+        <View key={st._id} style={styles.subtaskItem}>
+
+          {/* Checkbox */}
+          <TouchableOpacity
+            onPress={() => toggleSubtask(st._id, st.completed)}
+            style={styles.checkboxContainer}
+          >
             <Ionicons
               name={st.completed ? 'checkbox' : 'square-outline'}
               size={20}
               color={st.completed ? '#4CAF50' : '#ccc'}
             />
           </TouchableOpacity>
-          {editingSubtaskId === st.id ? (
+
+          {/* Title or Edit Mode */}
+          {editingSubtaskId === st._id ? (
             <View style={styles.editContainer}>
               <TextInput
                 style={styles.editInput}
@@ -200,16 +236,32 @@ export default function TaskDetail({ route, navigation }) {
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity onPress={() => startEditing(st.id, st.title)} style={styles.textContainer}>
-              <Text style={[styles.subtaskText, st.completed && styles.completedText]}>{st.title}</Text>
+            <TouchableOpacity
+              onPress={() => startEditing(st._id, st.title)}
+              style={styles.textContainer}
+            >
+              <Text
+                style={[
+                  styles.subtaskText,
+                  st.completed && styles.completedText,
+                ]}
+              >
+                {st.title}
+              </Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity onPress={() => deleteSubtask(st.id)} style={styles.deleteBtn}>
+
+          {/* Delete */}
+          <TouchableOpacity
+            onPress={() => deleteSubtask(st._id)}
+            style={styles.deleteBtn}
+          >
             <Ionicons name="trash" size={20} color="#ff0000" />
           </TouchableOpacity>
         </View>
       ))}
 
+      {/* Add Subtask */}
       {showAddSubtask && (
         <View style={styles.addSubtaskContainer}>
           <TextInput
@@ -224,6 +276,7 @@ export default function TaskDetail({ route, navigation }) {
         </View>
       )}
 
+      {/* Mark Completed */}
       <TouchableOpacity style={styles.completeButton} onPress={markComplete}>
         <Text style={styles.completeText}>Mark Completed</Text>
       </TouchableOpacity>
@@ -277,7 +330,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  row: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
   completeButton: {
     backgroundColor: '#FFD700',
     padding: 12,

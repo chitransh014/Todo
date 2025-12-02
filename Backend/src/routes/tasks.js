@@ -236,7 +236,10 @@ router.get('/learning/stats', authenticateToken, async (req, res) => {
     const tasks = await Task.find({ userId });
 
     // Completed tasks count
-    const completedTasks = tasks.filter(t => t.status === "completed").length;
+    const completedTasks = tasks.filter(
+  t => t.status === "completed" || t.completed === true
+).length;
+
 
     // Total time spent (if you want, you can store duration field later)
     const totalTimeSpent = tasks
@@ -249,7 +252,10 @@ router.get('/learning/stats', authenticateToken, async (req, res) => {
       const cat = task.energyLevel || "General"; // grouping by energyLevel for now
       if (!progress[cat]) progress[cat] = { done: 0, total: 0 };
       progress[cat].total += 1;
-      if (task.status === "completed") progress[cat].done += 1;
+      if (task.status === "completed" || task.completed === true) {
+  progress[cat].done += 1;
+}
+
     });
 
     // Convert to %
@@ -262,10 +268,11 @@ router.get('/learning/stats', authenticateToken, async (req, res) => {
     }
 
     // Recent completed tasks
-    const recentCompleted = tasks
-      .filter(t => t.status === "completed")
-      .slice(-5)
-      .reverse();
+ const recentCompleted = tasks
+  .filter(t => t.status === "completed" || t.completed === true)
+  .slice(-5)
+  .reverse();
+
 
     res.json({
       completedTasks,

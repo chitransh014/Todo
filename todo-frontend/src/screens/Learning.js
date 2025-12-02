@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ScrollView } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BASE_URL } from '../../api/auth';
+import { BASE_URL } from '../api/auth';
+
 
 export default function Learning() {
   const [stats, setStats] = useState(null);
