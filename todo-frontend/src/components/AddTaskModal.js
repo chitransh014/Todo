@@ -182,20 +182,20 @@ export default function AddTaskModal({
     }
 
     try {
-      if (taskToEdit) {
-        // Cancel old notification
-        if (taskToEdit.notificationId) {
-          await Notifications.cancelScheduledNotificationAsync(taskToEdit.notificationId);
-        }
+ if (taskToEdit) {
+  if (taskToEdit.notificationId) {
+    await Notifications.cancelScheduledNotificationAsync(taskToEdit.notificationId);
+  }
 
-        await onUpdateTask(taskToEdit.id, {
-          title,
-          description,
-          dueDate: finalDueDate,
-          subtasks: cleanSubtasks,
-          notificationId,
-        });
-      } else {
+  await onUpdateTask(taskToEdit._id, {
+    title,
+    description,
+    dueDate: finalDueDate,
+    subtasks: cleanSubtasks,
+    notificationId,
+  });
+}
+ else {
         await onAddTask({
           title,
           description,
