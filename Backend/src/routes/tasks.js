@@ -215,7 +215,7 @@ router.get("/learning/stats", authenticateToken, async (req, res) => {
     res.json({
       completedTasks: completedTasks.length,
       timeSpent: 0, // optional
-      progress: { General: 100 },
+      
       recentCompleted
     });
   } catch (error) {
