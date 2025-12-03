@@ -28,7 +28,7 @@ const taskSchema = new mongoose.Schema(
       trim: true,
     },
     dueDate: {
-      type: Date,default: null
+      type: Date, default: null
     },
 
     status: {
@@ -46,6 +46,10 @@ const taskSchema = new mongoose.Schema(
       ref: 'Goal',
     },
     subtasks: [subtaskSchema],
+    aiGeneratedOnce: {
+      type: Boolean,
+      default: false, // 🔥 AI can be used only once
+    },
     createdAt: {
       type: Date,
       default: Date.now,

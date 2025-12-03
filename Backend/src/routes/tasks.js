@@ -169,16 +169,27 @@ router.delete("/:id", authenticateToken, async (req, res) => {
 
 router.post("/ai-breakdown", authenticateToken, async (req, res) => {
   try {
-    const { title, description } = req.body;
-    if (!title) return res.status(400).json({ error: "Title is required" });
+    const { taskId, title, description } = req.body;
+
+    if (!title)
+      return res.status(400).json({ error: "Title is required" });
 
     const subtasks = await breakdownTask(title, description);
-    res.json({ subtasks });
+
+    // 🔥 If the request includes a taskId → mark the task as AI used
+    if (taskId) {
+      await Task.findByIdAndUpdate(taskId, {
+        aiGeneratedOnce: true,
+      });
+    }
+
+    return res.json({ subtasks });
   } catch (error) {
     console.error("AI Breakdown Error:", error);
-    res.status(500).json({ error: "AI Breakdown failed" });
+    return res.status(500).json({ error: "AI Breakdown failed" });
   }
 });
+
 
 /* ------------------------- Today's Tasks ------------------------- */
 
