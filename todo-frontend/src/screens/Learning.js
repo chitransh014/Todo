@@ -4,19 +4,18 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  Dimensions,
+  RefreshControl
 } from "react-native";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BASE_URL } from "../api/auth";
 import { Ionicons } from "@expo/vector-icons";
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
-
 export default function Learning() {
   const [stats, setStats] = useState(null);
   const [weeklyData, setWeeklyData] = useState([]);
   const [streak, setStreak] = useState(0);
+  const [refreshing, setRefreshing] = useState(false); // 🔥 NEW
 
   useEffect(() => {
     fetchStats();
@@ -31,74 +30,92 @@ export default function Learning() {
 
       setStats(response.data);
 
-      calculateWeeklyGraph(response.data.recentCompleted);
-      calculateStreak(response.data.recentCompleted);
+      const completed = response.data.recentCompleted || [];
 
+      calculateWeeklyGraph(completed);
+      calculateStreak(completed);
     } catch (err) {
       console.error("Learning stats error:", err);
     }
   };
 
-  /* ---------- Weekly Graph ---------- */
+  /* 🔄 Pull-to-refresh handler */
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchStats();
+    setTimeout(() => setRefreshing(false), 500);
+  };
+
+  /* ---------- WEEKLY GRAPH ---------- */
   const calculateWeeklyGraph = (completedTasks) => {
     const last7 = Array(7).fill(0);
+
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     completedTasks.forEach((t) => {
       if (!t.completedAt) return;
 
-      const date = new Date(t.completedAt);
-      const diff = Math.floor((today - date) / (1000 * 60 * 60 * 24));
+      const d = new Date(t.completedAt);
+      d.setHours(0, 0, 0, 0);
 
-      if (diff < 7 && diff >= 0) last7[6 - diff] += 1;
+      const diff = Math.round(
+        (today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      if (diff >= 0 && diff < 7) last7[6 - diff] += 1;
     });
 
     setWeeklyData(last7);
   };
 
-  /* ---------- Streak ---------- */
-  const calculateStreak = (tasks) => {
+  /* ---------- DAY LABELS ---------- */
+  const getDayLabels = () => {
+    const labels = [];
     const today = new Date();
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      labels.push(d.toLocaleDateString("en-US", { weekday: "short" })[0]);
+    }
+    return labels;
+  };
+
+  /* ---------- STREAK ---------- */
+  const calculateStreak = (tasks) => {
     let streakCount = 0;
 
-    for (let i = 0; i < 50; i++) {
-      const checkDay = new Date();
-      checkDay.setDate(today.getDate() - i);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-      const done = tasks.some((t) => {
+    for (let i = 0; i < 60; i++) {
+      const check = new Date(today);
+      check.setDate(today.getDate() - i);
+
+      const hasTask = tasks.some((t) => {
         if (!t.completedAt) return false;
-
         const d = new Date(t.completedAt);
-
-        return (
-          d.getDate() === checkDay.getDate() &&
-          d.getMonth() === checkDay.getMonth() &&
-          d.getFullYear() === checkDay.getFullYear()
-        );
+        d.setHours(0, 0, 0, 0);
+        return d.getTime() === check.getTime();
       });
 
-      if (done) streakCount++;
+      if (hasTask) streakCount++;
       else break;
     }
 
     setStreak(streakCount);
   };
 
-  /* ---------- Date Parser ---------- */
+  /* ---------- DATE PARSER ---------- */
   const formatTaskDate = (rawDate) => {
     if (!rawDate) return "No date";
-
     let parsed = new Date(rawDate);
 
-    // If invalid → manually rebuild (handles "2/12/2025")
     if (isNaN(parsed.getTime())) {
       const parts = rawDate.split(/[-/]/);
-
       if (parts.length >= 3) {
-        const mm = parts[0];
-        const dd = parts[1];
-        const yyyy = parts[2];
-        parsed = new Date(`${yyyy}-${mm}-${dd}`);
+        parsed = new Date(`${parts[2]}-${parts[0]}-${parts[1]}`);
       }
     }
 
@@ -109,14 +126,25 @@ export default function Learning() {
 
   if (!stats) return <Text style={styles.loading}>Loading...</Text>;
 
+  const dayLabels = getDayLabels();
+
   return (
     <FlatList
       data={stats.recentCompleted}
       keyExtractor={(item) => item._id}
       contentContainerStyle={{ padding: 20 }}
+      
+      /* 🔥 SWIPE-TO-REFRESH ADDED HERE */
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={["#3498db"]}
+        />
+      }
+
       ListHeaderComponent={
         <>
-          {/* HEADER */}
           <Text style={styles.header}>Your Learning Stats</Text>
 
           {/* STREAK CARD */}
@@ -144,15 +172,21 @@ export default function Learning() {
           {/* WEEKLY ACTIVITY */}
           <Text style={styles.sectionTitle}>Weekly Activity</Text>
 
-          <View style={styles.graphContainer}>
-            {weeklyData.map((count, index) => (
-              <View key={index} style={styles.barWrapper}>
-                <View style={[styles.bar, { height: count * 20 }]} />
-                <Text style={styles.barLabel}>
-                  {["M", "T", "W", "T", "F", "S", "S"][index]}
-                </Text>
-              </View>
-            ))}
+          <View style={styles.weekRow}>
+            {weeklyData.map((count, index) => {
+              const isCompleted = count > 0;
+              return (
+                <View key={index} style={styles.weekItem}>
+                  <View
+                    style={[
+                      styles.dayCircle,
+                      isCompleted ? styles.dayFilled : styles.dayMissed,
+                    ]}
+                  />
+                  <Text style={styles.dayLabel}>{dayLabels[index]}</Text>
+                </View>
+              );
+            })}
           </View>
 
           <Text style={styles.sectionTitle}>Recently Completed</Text>
@@ -165,7 +199,9 @@ export default function Learning() {
             <Text style={styles.recentTitle}>{item.title}</Text>
 
             <Text style={styles.recentDate}>
-              {formatTaskDate(item.completedAt || item.updatedAt || item.createdAt)}
+              {formatTaskDate(
+                item.completedAt || item.updatedAt || item.createdAt
+              )}
             </Text>
           </View>
         </View>
@@ -175,7 +211,6 @@ export default function Learning() {
 }
 
 /* ---------------------- STYLES ---------------------- */
-
 const styles = StyleSheet.create({
   loading: { marginTop: 40, textAlign: "center" },
 
@@ -219,29 +254,38 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 28, fontWeight: "700", color: "#fff" },
   statLabel: { color: "#fff", opacity: 0.8, marginTop: 5 },
 
-  /* Weekly Graph */
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginVertical: 15,
-    color: "#2c3e50",
-  },
-  graphContainer: {
+  /* Weekly Tracker */
+  weekRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginBottom: 20,
+    paddingVertical: 15,
     backgroundColor: "#fff",
-    padding: 15,
     borderRadius: 15,
+    paddingHorizontal: 15,
+    marginBottom: 20,
+    elevation: 2,
   },
-  barWrapper: { alignItems: "center" },
-  bar: {
-    width: 20,
+  weekItem: {
+    alignItems: "center",
+    width: 35,
+  },
+  dayCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    marginBottom: 8,
+  },
+  dayFilled: {
     backgroundColor: "#3498db",
-    borderRadius: 10,
   },
-  barLabel: { marginTop: 6, color: "#7f8c8d", fontSize: 14 },
+  dayMissed: {
+    backgroundColor: "#dfe6e9",
+  },
+  dayLabel: {
+    fontSize: 14,
+    color: "#34495e",
+    fontWeight: "500",
+  },
 
   /* Recent Items */
   recentItem: {

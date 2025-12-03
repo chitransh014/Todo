@@ -128,7 +128,14 @@ export default function AddTaskModal({
         completed: false,
       }));
 
-      setSubtasks(aiList);
+      // 🔥 Append AI subtasks instead of replacing old ones
+setSubtasks((prev) => [
+  ...prev,
+  ...aiList.filter(
+    (ai) => !prev.some((old) => old.title.trim().toLowerCase() === ai.title.trim().toLowerCase())
+  )
+]);
+
     } catch (error) {
       console.error("AI Breakdown Error:", error);
       alert("AI failed to generate subtasks.");

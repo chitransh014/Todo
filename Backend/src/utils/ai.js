@@ -9,7 +9,7 @@ export async function breakdownTask(title, description) {
     });
 
     const prompt = `
-Break the following task into 4–7 clear actionable subtasks.
+Break the following task into 4–5 clear actionable subtasks.
 Return ONLY a simple bullet list, no extra text.
 
 Task: ${title}

@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity,RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { useTasks } from '../context/TaskContext';
@@ -7,6 +7,7 @@ import AddTaskModal from '../components/AddTaskModal';
 
 export default function Goals({ navigation }) {
   const { tasks, fetchTasks, updateTask, addTask } = useTasks();
+  const [refreshing, setRefreshing] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [expandedTasks, setExpandedTasks] = useState(new Set());
@@ -17,6 +18,12 @@ export default function Goals({ navigation }) {
       fetchTasks();
     }, [])
   );
+
+    /* Pull to Refresh */
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchTasks().finally(() => setRefreshing(false));
+  }, []);
 
   const toggleExpanded = (taskId) => {
     const newExpanded = new Set(expandedTasks);
@@ -131,6 +138,9 @@ export default function Goals({ navigation }) {
           item._id ? item._id.toString() : Math.random().toString()
         }
         renderItem={renderTask}
+                refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
         ListEmptyComponent={
           <Text style={styles.emptyText}>No tasks yet.</Text>
         }
