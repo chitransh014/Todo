@@ -203,22 +203,23 @@ router.get("/today", authenticateToken, async (req, res) => {
 router.get("/learning/stats", authenticateToken, async (req, res) => {
   try {
     const tasks = await Task.find({ userId: req.user._id }).sort({
-      completedAt: -1
+      completedAt: -1,
     });
 
-    // ⭐ Filter completed tasks only
-    const completedTasks = tasks.filter(t => t.status === "completed");
+    const completedTasks = tasks.filter((t) => t.status === "completed");
 
-    // ⭐ LAST 5 COMPLETED TASKS (with proper ISO date)
-    const recentCompleted = completedTasks.slice(0, 5).map(t => ({
+    /* ---------- RECENT COMPLETED ---------- */
+    const recentCompleted = completedTasks.slice(0, 5).map((t) => ({
       _id: t._id,
       title: t.title,
       completedAt: t.completedAt || t.updatedAt || t.createdAt,
     }));
 
-    /* --------------------- Calculate Streak (Fixed) --------------------- */
+    /* ---------- STREAK FIX (NO MORE BUG) ---------- */
+
     let streak = 0;
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     for (let i = 0; i < 50; i++) {
       const checkDay = new Date();
@@ -237,37 +238,43 @@ router.get("/learning/stats", authenticateToken, async (req, res) => {
       else break;
     }
 
-    /* --------------------- Weekly Activity (Fixed) --------------------- */
+    /* ---------- WEEKLY ACTIVITY FIX (NO MORE WRONG DAY) ---------- */
+
     const weekly = Array(7).fill(0);
 
     completedTasks.forEach((t) => {
       if (!t.completedAt) return;
 
-      const date = new Date(t.completedAt);
-      const diff = Math.floor(
-        (today.setHours(0, 0, 0, 0) - date.setHours(0, 0, 0, 0)) /
-          (1000 * 60 * 60 * 24)
-      );
+      const finishDate = new Date(t.completedAt);
+      finishDate.setHours(0, 0, 0, 0);
 
-      if (diff >= 0 && diff < 7) {
-        weekly[6 - diff] += 1;
+      const todayFixed = new Date();
+      todayFixed.setHours(0, 0, 0, 0);
+
+      const diff =
+        (todayFixed.getTime() - finishDate.getTime()) /
+        (1000 * 60 * 60 * 24);
+
+      const dayDiff = Math.floor(diff);
+
+      if (dayDiff >= 0 && dayDiff < 7) {
+        weekly[6 - dayDiff] += 1;
       }
     });
 
-    // ⭐ Final Response
-    res.json({
+    return res.json({
       completedTasks: completedTasks.length,
       timeSpent: 0,
       streak,
-      weekly,            // <-- front-end uses this
-      recentCompleted,   // <-- includes real dates
+      weekly, // <-- correct graph
+      recentCompleted,
     });
-
   } catch (error) {
     console.error("Learning stats error:", error);
     res.status(500).json({ error: "Failed to fetch stats" });
   }
 });
+
 
 
 export default router;
