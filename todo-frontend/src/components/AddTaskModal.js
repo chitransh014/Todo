@@ -186,17 +186,23 @@ export default function AddTaskModal({
 
     const cleanSubtasks = subtasks.filter((s) => s.title.trim() !== "");
 
-    let notificationId = null;
-    if (finalDueDate) {
-      notificationId = await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "⏰ Task Reminder",
-          body: `Don't forget: ${title}`,
-          sound: true,
-        },
-        trigger: new Date(finalDueDate),
-      });
-    }
+let notificationId = null;
+
+if (finalDueDate) {
+  const triggerDate = new Date(finalDueDate);
+
+  notificationId = await Notifications.scheduleNotificationAsync({
+    content: {
+      title: "⏰ Task Reminder",
+      body: `Don't forget: ${title}`,
+      sound: true,
+    },
+    trigger: { type: "date", date: triggerDate }, // ✅ FIXED
+  });
+
+  console.log("Notification Scheduled with ID:", notificationId);
+}
+
 
     try {
       if (taskToEdit) {

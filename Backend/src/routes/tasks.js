@@ -16,6 +16,8 @@ const addTaskSchema = Joi.object({
     .try(Joi.date(), Joi.string().isoDate(), Joi.allow(null))
     .optional(),
   notificationId: Joi.string().allow(null).optional(),
+  aiGeneratedOnce: Joi.boolean().optional(),
+
   subtasks: Joi.array()
     .items(
       Joi.object({
@@ -36,6 +38,8 @@ const updateTaskSchema = Joi.object({
     .valid("pending", "in_progress", "completed", "failed")
     .optional(),
   notificationId: Joi.string().allow(null).optional(),
+  aiGeneratedOnce: Joi.boolean().optional(),
+
   subtasks: Joi.array()
     .items(
       Joi.object({

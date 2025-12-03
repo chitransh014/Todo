@@ -44,6 +44,8 @@ export const TaskProvider = ({ children }) => {
 
       setTasks((prev) => [response.data.task, ...prev]);
     } catch (err) {
+      console.log("BACKEND SAYS:", err.response?.data);
+
       console.error("Add task error:", err);
     }
   };
