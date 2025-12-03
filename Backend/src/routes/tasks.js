@@ -198,7 +198,7 @@ router.get("/today", authenticateToken, async (req, res) => {
   }
 });
 
-/* ------------------------- Learning Stats (Streak + Weekly Data) ------------------------- */
+/* ------------------------- Learning Stats (FULLY FIXED) ------------------------- */
 
 router.get("/learning/stats", authenticateToken, async (req, res) => {
   try {
@@ -206,22 +206,68 @@ router.get("/learning/stats", authenticateToken, async (req, res) => {
       completedAt: -1
     });
 
-    // Completed count
-    const completedTasks = tasks.filter((t) => t.status === "completed");
+    // ⭐ Filter completed tasks only
+    const completedTasks = tasks.filter(t => t.status === "completed");
 
-    // Last 5 for recent list
-    const recentCompleted = completedTasks.slice(0, 5);
+    // ⭐ LAST 5 COMPLETED TASKS (with proper ISO date)
+    const recentCompleted = completedTasks.slice(0, 5).map(t => ({
+      _id: t._id,
+      title: t.title,
+      completedAt: t.completedAt || t.updatedAt || t.createdAt,
+    }));
 
+    /* --------------------- Calculate Streak (Fixed) --------------------- */
+    let streak = 0;
+    const today = new Date();
+
+    for (let i = 0; i < 50; i++) {
+      const checkDay = new Date();
+      checkDay.setHours(0, 0, 0, 0);
+      checkDay.setDate(today.getDate() - i);
+
+      const completed = completedTasks.some((t) => {
+        if (!t.completedAt) return false;
+        const d = new Date(t.completedAt);
+        d.setHours(0, 0, 0, 0);
+
+        return d.getTime() === checkDay.getTime();
+      });
+
+      if (completed) streak++;
+      else break;
+    }
+
+    /* --------------------- Weekly Activity (Fixed) --------------------- */
+    const weekly = Array(7).fill(0);
+
+    completedTasks.forEach((t) => {
+      if (!t.completedAt) return;
+
+      const date = new Date(t.completedAt);
+      const diff = Math.floor(
+        (today.setHours(0, 0, 0, 0) - date.setHours(0, 0, 0, 0)) /
+          (1000 * 60 * 60 * 24)
+      );
+
+      if (diff >= 0 && diff < 7) {
+        weekly[6 - diff] += 1;
+      }
+    });
+
+    // ⭐ Final Response
     res.json({
       completedTasks: completedTasks.length,
-      timeSpent: 0, // optional
-      
-      recentCompleted
+      timeSpent: 0,
+      streak,
+      weekly,            // <-- front-end uses this
+      recentCompleted,   // <-- includes real dates
     });
+
   } catch (error) {
     console.error("Learning stats error:", error);
     res.status(500).json({ error: "Failed to fetch stats" });
   }
 });
+
 
 export default router;
