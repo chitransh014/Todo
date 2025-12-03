@@ -13,9 +13,11 @@ const addTaskSchema = Joi.object({
   title: Joi.string().required(),
   description: Joi.string().allow("").optional(),
   dueDate: Joi.alternatives()
-    .try(Joi.date(), Joi.string().isoDate(), Joi.allow(null))
+    .try(Joi.date(), Joi.string(), Joi.allow(null))
     .optional(),
   notificationId: Joi.string().allow(null).optional(),
+
+  // ⭐ allow this in validation
   aiGeneratedOnce: Joi.boolean().optional(),
 
   subtasks: Joi.array()
@@ -32,12 +34,16 @@ const updateTaskSchema = Joi.object({
   title: Joi.string().optional(),
   description: Joi.string().allow("").optional(),
   dueDate: Joi.alternatives()
-    .try(Joi.date(), Joi.string().isoDate(), Joi.allow(null))
+    .try(Joi.date(), Joi.string(), Joi.allow(null))
     .optional(),
+
   status: Joi.string()
     .valid("pending", "in_progress", "completed", "failed")
     .optional(),
+
   notificationId: Joi.string().allow(null).optional(),
+
+  // ⭐ allow updating this too
   aiGeneratedOnce: Joi.boolean().optional(),
 
   subtasks: Joi.array()
@@ -65,19 +71,23 @@ router.post("/", authenticateToken, async (req, res) => {
       dueDate: dueDate ? new Date(dueDate) : null,
       status: "pending",
       notificationId: notificationId || null,
+      subtasks: subtasks || [],
+
+      // ⭐ Save the AI flag
+      aiGeneratedOnce: value.aiGeneratedOnce || false,
+
       userId: req.user._id,
-      subtasks: subtasks || []
     });
 
     await task.save();
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Task added successfully",
-      task
+      task,
     });
   } catch (error) {
     console.error("Add task error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -86,7 +96,7 @@ router.post("/", authenticateToken, async (req, res) => {
 router.get("/", authenticateToken, async (req, res) => {
   try {
     const tasks = await Task.find({ userId: req.user._id }).sort({
-      createdAt: -1
+      createdAt: -1,
     });
 
     res.json({ tasks });
@@ -102,7 +112,7 @@ router.get("/:id", authenticateToken, async (req, res) => {
   try {
     const task = await Task.findOne({
       _id: req.params.id,
-      userId: req.user._id
+      userId: req.user._id,
     });
 
     if (!task) return res.status(404).json({ error: "Task not found" });
@@ -114,7 +124,7 @@ router.get("/:id", authenticateToken, async (req, res) => {
   }
 });
 
-/* ------------------------- Update Task (Fix CompletedAt) ------------------------- */
+/* ------------------------- Update Task ------------------------- */
 
 router.put("/:id", authenticateToken, async (req, res) => {
   try {
@@ -123,12 +133,11 @@ router.put("/:id", authenticateToken, async (req, res) => {
 
     const updateData = { ...value };
 
-    // Convert dueDate
     if (updateData.dueDate) {
       updateData.dueDate = new Date(updateData.dueDate);
     }
 
-    // ⭐ If marking task completed → set completedAt
+    // ⭐ Mark completion time
     if (updateData.status === "completed") {
       updateData.completedAt = new Date();
     }
@@ -143,7 +152,7 @@ router.put("/:id", authenticateToken, async (req, res) => {
 
     res.json({
       message: "Task updated successfully",
-      task
+      task,
     });
   } catch (error) {
     console.error("Update task error:", error);
@@ -157,7 +166,7 @@ router.delete("/:id", authenticateToken, async (req, res) => {
   try {
     const task = await Task.findOneAndDelete({
       _id: req.params.id,
-      userId: req.user._id
+      userId: req.user._id,
     });
 
     if (!task) return res.status(404).json({ error: "Task not found" });
@@ -180,11 +189,9 @@ router.post("/ai-breakdown", authenticateToken, async (req, res) => {
 
     const subtasks = await breakdownTask(title, description);
 
-    // 🔥 If the request includes a taskId → mark the task as AI used
+    // ⭐ When AI is used, mark the task as AI-used
     if (taskId) {
-      await Task.findByIdAndUpdate(taskId, {
-        aiGeneratedOnce: true,
-      });
+      await Task.findByIdAndUpdate(taskId, { aiGeneratedOnce: true });
     }
 
     return res.json({ subtasks });
@@ -194,14 +201,13 @@ router.post("/ai-breakdown", authenticateToken, async (req, res) => {
   }
 });
 
-
 /* ------------------------- Today's Tasks ------------------------- */
 
 router.get("/today", authenticateToken, async (req, res) => {
   try {
     const tasks = await Task.find({
       userId: req.user._id,
-      status: { $ne: "completed" }
+      status: { $ne: "completed" },
     })
       .sort({ createdAt: -1 })
       .limit(10);
@@ -213,7 +219,7 @@ router.get("/today", authenticateToken, async (req, res) => {
   }
 });
 
-/* ------------------------- Learning Stats (FULLY FIXED) ------------------------- */
+/* ------------------------- Learning Stats ------------------------- */
 
 router.get("/learning/stats", authenticateToken, async (req, res) => {
   try {
@@ -223,52 +229,45 @@ router.get("/learning/stats", authenticateToken, async (req, res) => {
 
     const completedTasks = tasks.filter((t) => t.status === "completed");
 
-    /* ---------- RECENT COMPLETED ---------- */
     const recentCompleted = completedTasks.slice(0, 5).map((t) => ({
       _id: t._id,
       title: t.title,
       completedAt: t.completedAt || t.updatedAt || t.createdAt,
     }));
 
-    /* ---------- STREAK FIX (NO MORE BUG) ---------- */
-
+    /* ---------- Streak ---------- */
     let streak = 0;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     for (let i = 0; i < 50; i++) {
-      const checkDay = new Date();
-      checkDay.setHours(0, 0, 0, 0);
-      checkDay.setDate(today.getDate() - i);
+      const check = new Date(today);
+      check.setDate(today.getDate() - i);
+      check.setHours(0, 0, 0, 0);
 
-      const completed = completedTasks.some((t) => {
-        if (!t.completedAt) return false;
+      const done = completedTasks.some((t) => {
         const d = new Date(t.completedAt);
         d.setHours(0, 0, 0, 0);
-
-        return d.getTime() === checkDay.getTime();
+        return d.getTime() === check.getTime();
       });
 
-      if (completed) streak++;
+      if (done) streak++;
       else break;
     }
 
-    /* ---------- WEEKLY ACTIVITY FIX (NO MORE WRONG DAY) ---------- */
+    /* ---------- Weekly Graph ---------- */
 
     const weekly = Array(7).fill(0);
 
     completedTasks.forEach((t) => {
-      if (!t.completedAt) return;
-
-      const finishDate = new Date(t.completedAt);
-      finishDate.setHours(0, 0, 0, 0);
+      const d = new Date(t.completedAt);
+      d.setHours(0, 0, 0, 0);
 
       const todayFixed = new Date();
       todayFixed.setHours(0, 0, 0, 0);
 
       const diff =
-        (todayFixed.getTime() - finishDate.getTime()) /
-        (1000 * 60 * 60 * 24);
+        (todayFixed.getTime() - d.getTime()) / (1000 * 60 * 60 * 24);
 
       const dayDiff = Math.floor(diff);
 
@@ -281,15 +280,13 @@ router.get("/learning/stats", authenticateToken, async (req, res) => {
       completedTasks: completedTasks.length,
       timeSpent: 0,
       streak,
-      weekly, // <-- correct graph
+      weekly,
       recentCompleted,
     });
   } catch (error) {
     console.error("Learning stats error:", error);
-    res.status(500).json({ error: "Failed to fetch stats" });
+    return res.status(500).json({ error: "Failed to fetch stats" });
   }
 });
-
-
 
 export default router;

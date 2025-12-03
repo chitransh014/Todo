@@ -32,16 +32,17 @@ export default function AddTaskModal({
   const [pickerValue, setPickerValue] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [subtasks, setSubtasks] = useState([{ title: "", completed: false }]);
-  const [loadingAI, setLoadingAI] = useState(false);
   const [dueTime, setDueTime] = useState(null);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
-  const [aiUsed, setAiUsed] = useState(false); // NEW → Track AI usage
+  // ⭐ NEW — track if AI has been used already
+  const [aiGeneratedOnce, setAiGeneratedOnce] = useState(false);
+  const [loadingAI, setLoadingAI] = useState(false);
 
   const slideAnim = useRef(new Animated.Value(0)).current;
   const dragY = useRef(new Animated.Value(0)).current;
 
-  /* ------------------ Animate Modal ------------------ */
+  /* -------------------- OPEN/CLOSE ANIMATION -------------------- */
   useEffect(() => {
     if (isVisible) {
       Animated.timing(slideAnim, {
@@ -54,17 +55,27 @@ export default function AddTaskModal({
     }
   }, [isVisible]);
 
-  /* ------------------ Load Task When Editing ------------------ */
+  /* -------------------- LOAD TASK DATA WHEN EDITING -------------------- */
   useEffect(() => {
     if (taskToEdit) {
       setTitle(taskToEdit.title || "");
       setDescription(taskToEdit.description || "");
 
-      // Date / Time
+      // load aiGeneratedOnce
+      setAiGeneratedOnce(taskToEdit.aiGeneratedOnce || false);
+
       if (taskToEdit.dueDate) {
         const dueDateTime = new Date(taskToEdit.dueDate);
-        setDueDate(new Date(dueDateTime.getFullYear(), dueDateTime.getMonth(), dueDateTime.getDate()));
-        setDueTime(new Date(dueDateTime));
+        setDueDate(new Date(dueDateTime));
+        setDueTime(
+          new Date(
+            dueDateTime.getFullYear(),
+            dueDateTime.getMonth(),
+            dueDateTime.getDate(),
+            dueDateTime.getHours(),
+            dueDateTime.getMinutes()
+          )
+        );
         setPickerValue(dueDateTime);
       } else {
         setDueDate(null);
@@ -72,7 +83,6 @@ export default function AddTaskModal({
         setPickerValue(new Date());
       }
 
-      // Subtasks
       setSubtasks(
         taskToEdit.subtasks?.length
           ? taskToEdit.subtasks.map((st) => ({
@@ -81,21 +91,19 @@ export default function AddTaskModal({
             }))
           : [{ title: "", completed: false }]
       );
-
-      // NEW → Hide AI if already used
-      setAiUsed(taskToEdit.aiGeneratedOnce === true);
     } else {
+      // Reset for new task
       setTitle("");
       setDescription("");
       setDueDate(null);
       setDueTime(null);
       setPickerValue(new Date());
       setSubtasks([{ title: "", completed: false }]);
-      setAiUsed(false); // reset
+      setAiGeneratedOnce(false); // reset
     }
   }, [taskToEdit, isVisible]);
 
-  /* ------------------ Subtask Actions ------------------ */
+  /* -------------------- SUBTASK ACTIONS -------------------- */
   const addSubtask = () =>
     setSubtasks([...subtasks, { title: "", completed: false }]);
 
@@ -114,7 +122,7 @@ export default function AddTaskModal({
     setSubtasks(updated);
   };
 
-  /* ------------------ AI SUBTASK GENERATOR ------------------ */
+  /* -------------------- AI SUBTASK GENERATOR (ONLY ONCE) -------------------- */
   const generateAISubtasks = async () => {
     if (!title.trim()) {
       alert("Enter a task title before using AI.");
@@ -127,33 +135,30 @@ export default function AddTaskModal({
 
       const response = await axios.post(
         `${BASE_URL}/tasks/ai-breakdown`,
-        {
-          title,
-          description,
-          taskId: taskToEdit ? taskToEdit._id : null, // NEW → mark AI used for existing task
-        },
+        { title, description },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      const newAI = response.data.subtasks.map((t) => ({
+      const aiList = response.data.subtasks.map((t) => ({
         title: t,
         completed: false,
       }));
 
-      // Append without duplicates
+      // Append but avoid duplicates
       setSubtasks((prev) => [
         ...prev,
-        ...newAI.filter(
+        ...aiList.filter(
           (ai) =>
             !prev.some(
               (old) =>
-                old.title.trim().toLowerCase() === ai.title.trim().toLowerCase()
+                old.title.trim().toLowerCase() ===
+                ai.title.trim().toLowerCase()
             )
         ),
       ]);
 
-      // NEW → Hide button immediately
-      setAiUsed(true);
+      // ⭐ Mark that AI has been used
+      setAiGeneratedOnce(true);
     } catch (error) {
       console.error("AI Breakdown Error:", error);
       alert("AI failed to generate subtasks.");
@@ -162,47 +167,46 @@ export default function AddTaskModal({
     }
   };
 
-  /* ------------------ Date Picker ------------------ */
+  /* -------------------- DATE HANDLING -------------------- */
   const onDateChange = (event, selectedDate) => {
-    if (event.type === "set") setDueDate(selectedDate);
+    if (event.type === "set") {
+      setDueDate(selectedDate);
+    }
     setShowDatePicker(false);
   };
 
-  /* ------------------ Save Task ------------------ */
+  /* -------------------- SUBMIT -------------------- */
   const handleSubmit = async () => {
-    if (!title.trim()) return alert("Please enter a task title");
+    if (!title.trim()) {
+      return alert("Please enter a task title");
+    }
 
     let finalDueDate = null;
     if (dueDate) {
       const date = new Date(dueDate);
       if (dueTime) {
-        const t = new Date(dueTime);
-        date.setHours(t.getHours(), t.getMinutes());
+        const time = new Date(dueTime);
+        date.setHours(time.getHours(), time.getMinutes(), 0, 0);
       } else {
-        date.setHours(23, 59, 59);
+        date.setHours(23, 59, 59, 999);
       }
       finalDueDate = date.toISOString();
     }
 
     const cleanSubtasks = subtasks.filter((s) => s.title.trim() !== "");
 
-let notificationId = null;
+    let notificationId = null;
 
-if (finalDueDate) {
-  const triggerDate = new Date(finalDueDate);
-
-  notificationId = await Notifications.scheduleNotificationAsync({
-    content: {
-      title: "⏰ Task Reminder",
-      body: `Don't forget: ${title}`,
-      sound: true,
-    },
-    trigger: { type: "date", date: triggerDate }, // ✅ FIXED
-  });
-
-  console.log("Notification Scheduled with ID:", notificationId);
-}
-
+    if (finalDueDate) {
+      notificationId = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "⏰ Task Reminder",
+          body: `Don't forget: ${title}`,
+          sound: true,
+        },
+        trigger: { type: "date", date: new Date(finalDueDate) },
+      });
+    }
 
     try {
       if (taskToEdit) {
@@ -212,7 +216,7 @@ if (finalDueDate) {
           dueDate: finalDueDate,
           subtasks: cleanSubtasks,
           notificationId,
-          aiGeneratedOnce: aiUsed, // NEW
+          aiGeneratedOnce, // ⭐ send value
         });
       } else {
         await onAddTask({
@@ -221,16 +225,18 @@ if (finalDueDate) {
           dueDate: finalDueDate,
           subtasks: cleanSubtasks,
           notificationId,
-          aiGeneratedOnce: aiUsed, // NEW
+          aiGeneratedOnce, // ⭐ send value
         });
       }
+
       onClose();
     } catch (err) {
+      console.log("Submit Error:", err);
       alert("Error saving task.");
     }
   };
 
-  /* ------------------ Swipe Close Gesture ------------------ */
+  /* -------------------- SWIPE DOWN CLOSE -------------------- */
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, g) => g.dy > 10,
@@ -243,17 +249,15 @@ if (finalDueDate) {
             toValue: 0,
             duration: 200,
             useNativeDriver: true,
-          }).start(onClose);
+          }).start(() => onClose());
         } else {
-          Animated.spring(dragY, {
-            toValue: 0,
-            useNativeDriver: true,
-          }).start();
+          Animated.spring(dragY, { toValue: 0, useNativeDriver: true }).start();
         }
       },
     })
   ).current;
 
+  /* -------------------- UI -------------------- */
   return (
     <Modal visible={isVisible} transparent animationType="none">
       <KeyboardAvoidingView
@@ -325,8 +329,8 @@ if (finalDueDate) {
                 value={pickerValue}
                 mode="date"
                 display="default"
-                minimumDate={new Date()}
                 onChange={onDateChange}
+                minimumDate={new Date()}
               />
             )}
 
@@ -350,19 +354,21 @@ if (finalDueDate) {
               <DateTimePicker
                 value={dueTime || new Date()}
                 mode="time"
+                is24Hour={false}
                 display={Platform.OS === "ios" ? "spinner" : "default"}
-                onChange={(e, selected) => {
-                  if (e.type === "set") setDueTime(selected);
+                onChange={(event, selectedTime) => {
+                  if (event.type === "set") {
+                    setDueTime(selectedTime);
+                  }
                   setShowTimePicker(false);
                 }}
               />
             )}
 
-            {/* Subtasks Header */}
             <Text style={styles.subHeader}>Subtasks</Text>
 
-            {/* AI Button → only if not used */}
-            {!aiUsed && (
+            {/* ⭐ AI BUTTON (only shows if NOT used already) */}
+            {!aiGeneratedOnce && (
               <TouchableOpacity
                 style={styles.aiButton}
                 onPress={generateAISubtasks}
@@ -379,14 +385,17 @@ if (finalDueDate) {
               </TouchableOpacity>
             )}
 
-            {/* Subtasks List */}
             {subtasks.map((sub, index) => (
               <View key={index} style={styles.subtaskRow}>
                 <TouchableOpacity
                   onPress={() => toggleSubtaskCompletion(index)}
                 >
                   {sub.completed ? (
-                    <Ionicons name="checkmark-circle" size={22} color="#4CAF50" />
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={22}
+                      color="#4CAF50"
+                    />
                   ) : (
                     <Ionicons name="ellipse-outline" size={22} color="#ccc" />
                   )}
@@ -412,7 +421,6 @@ if (finalDueDate) {
               <Text style={styles.addSubtaskText}>Add another subtask</Text>
             </TouchableOpacity>
 
-            {/* Save */}
             <TouchableOpacity style={styles.saveBtn} onPress={handleSubmit}>
               <Text style={styles.saveBtnText}>
                 {taskToEdit ? "Update Task" : "Add Task"}
@@ -429,7 +437,6 @@ if (finalDueDate) {
   );
 }
 
-/* ------------------ STYLES ------------------ */
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
@@ -472,9 +479,19 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     backgroundColor: "#f8f8f8",
   },
-  textArea: { height: 80, textAlignVertical: "top" },
-  datePicker: { flexDirection: "row", alignItems: "center" },
-  subHeader: { fontSize: 17, fontWeight: "600", marginBottom: 6 },
+  textArea: {
+    height: 80,
+    textAlignVertical: "top",
+  },
+  datePicker: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  subHeader: {
+    fontSize: 17,
+    fontWeight: "600",
+    marginBottom: 6,
+  },
   aiButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -484,7 +501,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     justifyContent: "center",
   },
-  aiButtonText: { color: "#fff", marginLeft: 6, fontWeight: "600" },
+  aiButtonText: {
+    color: "#fff",
+    marginLeft: 6,
+    fontWeight: "600",
+  },
   subtaskRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -493,17 +514,36 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 10,
   },
-  subtaskInput: { flex: 1, marginLeft: 10 },
-  crossIcon: { fontSize: 20, color: "#e74c3c", marginLeft: 10 },
-  addSubtaskBtn: { flexDirection: "row", alignItems: "center", padding: 10 },
-  addSubtaskText: { marginLeft: 8, color: "#007BFF", fontWeight: "600" },
+  subtaskInput: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  crossIcon: {
+    fontSize: 20,
+    color: "#e74c3c",
+    marginLeft: 10,
+  },
+  addSubtaskBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 10,
+  },
+  addSubtaskText: {
+    marginLeft: 8,
+    color: "#007BFF",
+    fontWeight: "600",
+  },
   saveBtn: {
     backgroundColor: "#007BFF",
     padding: 14,
     borderRadius: 12,
     marginTop: 15,
   },
-  saveBtnText: { color: "#fff", fontWeight: "700", textAlign: "center" },
+  saveBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+    textAlign: "center",
+  },
   cancelText: {
     textAlign: "center",
     color: "#e74c3c",
