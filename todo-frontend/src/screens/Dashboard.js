@@ -8,12 +8,12 @@ import {
   Alert,
   RefreshControl,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { Swipeable } from "react-native-gesture-handler";
 import AddTaskModal from "../components/AddTaskModal";
+import { Ionicons } from "@expo/vector-icons";
 import { useTasks } from "../context/TaskContext";
 
 const Dashboard = () => {
-  const navigation = useNavigation();
   const { tasks, addTask, updateTask, deleteTask, fetchTasks } = useTasks();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -24,12 +24,14 @@ const Dashboard = () => {
     fetchTasks().finally(() => setRefreshing(false));
   }, []);
 
-  const updateTaskStatus = (taskId, newStatus) => {
-    updateTask(taskId, { status: newStatus });
+  /* ✔ Mark complete */
+  const toggleComplete = (task) => {
+    updateTask(task._id, { status: "completed" });
   };
 
+  /* ❌ Delete */
   const deleteTaskHandler = (taskId) => {
-    Alert.alert("Delete Task", "Are you sure?", [
+    Alert.alert("Delete Task", "Are you sure you want to delete this task?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
@@ -39,32 +41,62 @@ const Dashboard = () => {
     ]);
   };
 
-  const renderTask = ({ item }) => (
-    <View style={styles.taskItem}>
-      <View style={styles.taskContent}>
-        <Text style={styles.taskTitle}>{item.title}</Text>
-        {item.description ? (
-          <Text style={styles.taskDescription}>{item.description}</Text>
-        ) : null}
-      </View>
-      <View style={styles.taskActions}>
-        {item.status !== "completed" && (
-          <TouchableOpacity
-            style={[styles.actionButton, styles.completeButton]}
-            onPress={() => updateTaskStatus(item._id, "completed")}
-          >
-            <Text style={styles.buttonText}>Complete</Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          style={[styles.actionButton, styles.deleteButton]}
-          onPress={() => deleteTaskHandler(item._id)}
-        >
-          <Text style={styles.buttonText}>Delete</Text>
-        </TouchableOpacity>
-      </View>
+  /* 🔴 Swipe delete UI */
+  const renderRightActions = () => (
+    <View style={styles.deleteSwipe}>
+      <Ionicons name="trash" size={28} color="#fff" />
     </View>
   );
+
+  /* 🔥 Render Single Task */
+  const renderTask = ({ item }) => {
+    return (
+      <Swipeable
+        renderRightActions={renderRightActions}
+        onSwipeableOpen={() => deleteTaskHandler(item._id)}
+      >
+        <View style={styles.taskItem}>
+          {/* LEFT: Circle Complete Button */}
+          <TouchableOpacity
+            onPress={() => toggleComplete(item)}
+            style={styles.circleWrapper}
+          >
+            {item.status === "completed" ? (
+              <Ionicons name="checkmark-circle" size={28} color="#2ecc71" />
+            ) : (
+              <Ionicons
+                name="ellipse-outline"
+                size={28}
+                color="#b2bec3"
+              />
+            )}
+          </TouchableOpacity>
+
+          {/* MIDDLE TEXT */}
+          <View style={styles.taskContent}>
+            <Text
+              style={[
+                styles.taskTitle,
+                item.status === "completed" && styles.completedText,
+              ]}
+            >
+              {item.title}
+            </Text>
+            {item.description ? (
+              <Text
+                style={[
+                  styles.taskDescription,
+                  item.status === "completed" && styles.completedText,
+                ]}
+              >
+                {item.description}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+      </Swipeable>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -82,7 +114,7 @@ const Dashboard = () => {
         }
       />
 
-      {/* FAB */}
+      {/* Floating Add Task Button */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => setIsModalVisible(true)}
@@ -101,6 +133,7 @@ const Dashboard = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8f9fa", padding: 20 },
+
   sectionTitle: {
     fontSize: 24,
     fontWeight: "bold",
@@ -108,38 +141,57 @@ const styles = StyleSheet.create({
     color: "#34495e",
     textAlign: "center",
   },
+
   taskItem: {
+    flexDirection: "row",
     backgroundColor: "#ffffff",
-    padding: 20,
+    padding: 18,
     marginVertical: 8,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#e1e8ed",
     elevation: 3,
   },
+
+  circleWrapper: {
+    marginRight: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
   taskContent: { flex: 1 },
-  taskTitle: { fontSize: 18, fontWeight: "bold", color: "#2c3e50" },
-  taskDescription: { fontSize: 14, color: "#7f8c8d", marginTop: 5 },
-  taskActions: {
-    flexDirection: "row",
-    marginTop: 15,
-    justifyContent: "flex-end",
+
+  taskTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#2c3e50",
   },
-  actionButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    marginLeft: 10,
+
+  taskDescription: {
+    fontSize: 14,
+    color: "#7f8c8d",
+    marginTop: 4,
   },
-  completeButton: { backgroundColor: "#27ae60" },
-  deleteButton: { backgroundColor: "#e74c3c" },
-  buttonText: { color: "white", fontSize: 14 },
+
+  completedText: {
+    textDecorationLine: "line-through",
+    color: "#95a5a6",
+  },
+
+  deleteSwipe: {
+    backgroundColor: "#e74c3c",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 80,
+    borderRadius: 16,
+    marginVertical: 8,
+  },
+
   emptyText: {
     textAlign: "center",
     color: "#95a5a6",
     marginTop: 40,
     fontSize: 16,
   },
+
   fab: {
     position: "absolute",
     bottom: 30,
