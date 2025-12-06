@@ -1,2 +1,3 @@
-#Task selection for the session
-# UI 
+- [x] Update imports in Focus.js to include ScrollView and useCallback
+- [x] Define onRefresh function properly using useCallback
+- [x] Wrap the UI content in ScrollView with refreshControl prop

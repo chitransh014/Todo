@@ -130,7 +130,7 @@ export default function Goals({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>My Tasks</Text>
+      {/* <Text style={styles.title}>My Tasks</Text> */}
 
       <FlatList
         data={tasks}

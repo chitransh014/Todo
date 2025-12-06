@@ -7,94 +7,106 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
+  Animated,
 } from "react-native";
-import { Swipeable } from "react-native-gesture-handler";
+import { useNavigation } from "@react-navigation/native";
 import AddTaskModal from "../components/AddTaskModal";
-import { Ionicons } from "@expo/vector-icons";
 import { useTasks } from "../context/TaskContext";
+import {
+  Swipeable,
+  GestureHandlerRootView,
+} from "react-native-gesture-handler";
 
-const Dashboard = () => {
+export default function Dashboard() {
+  const navigation = useNavigation();
   const { tasks, addTask, updateTask, deleteTask, fetchTasks } = useTasks();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  /* 🔄 Pull to Refresh */
+  /* 🔄 Pull To Refresh */
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchTasks().finally(() => setRefreshing(false));
   }, []);
 
-  /* ✔ Mark complete */
-  const toggleComplete = (task) => {
-    updateTask(task._id, { status: "completed" });
+  /* 🔘 Toggle Task Complete */
+  const toggleComplete = (item) => {
+    const newStatus = item.status === "completed" ? "pending" : "completed";
+    updateTask(item._id, { status: newStatus });
   };
 
-  /* ❌ Delete */
-  const deleteTaskHandler = (taskId) => {
-    Alert.alert("Delete Task", "Are you sure you want to delete this task?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => deleteTask(taskId),
-      },
-    ]);
-  };
-
-  /* 🔴 Swipe delete UI */
-  const renderRightActions = () => (
-    <View style={styles.deleteSwipe}>
-      <Ionicons name="trash" size={28} color="#fff" />
-    </View>
+  /* 🗑 Swipe To Delete UI */
+  const renderRightActions = (taskId) => (
+    <TouchableOpacity
+      style={styles.deleteSwipe}
+      onPress={() => deleteTask(taskId)}
+    >
+      <Text style={styles.deleteText}>Delete</Text>
+    </TouchableOpacity>
   );
 
-  /* 🔥 Render Single Task */
+  /* 🎨 Task Item UI */
   const renderTask = ({ item }) => {
-    return (
-      <Swipeable
-        renderRightActions={renderRightActions}
-        onSwipeableOpen={() => deleteTaskHandler(item._id)}
-      >
-        <View style={styles.taskItem}>
-          {/* LEFT: Circle Complete Button */}
-          <TouchableOpacity
-            onPress={() => toggleComplete(item)}
-            style={styles.circleWrapper}
-          >
-            {item.status === "completed" ? (
-              <Ionicons name="checkmark-circle" size={28} color="#2ecc71" />
-            ) : (
-              <Ionicons
-                name="ellipse-outline"
-                size={28}
-                color="#b2bec3"
-              />
-            )}
-          </TouchableOpacity>
+    const scaleAnim = new Animated.Value(1);
 
-          {/* MIDDLE TEXT */}
-          <View style={styles.taskContent}>
-            <Text
-              style={[
-                styles.taskTitle,
-                item.status === "completed" && styles.completedText,
-              ]}
-            >
-              {item.title}
-            </Text>
-            {item.description ? (
+    const animateCheck = () => {
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 0.8,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    };
+
+    const onCheckPress = () => {
+      animateCheck();
+      toggleComplete(item);
+    };
+
+    return (
+      <GestureHandlerRootView>
+        <Swipeable renderRightActions={() => renderRightActions(item._id)}>
+          <View style={styles.taskCard}>
+            {/* Checkbox */}
+            <TouchableOpacity onPress={onCheckPress}>
+              <Animated.View style={[styles.checkCircle, { transform: [{ scale: scaleAnim }] }]}>
+                {item.status === "completed" && (
+                  <Text style={styles.checkMark}>✓</Text>
+                )}
+              </Animated.View>
+            </TouchableOpacity>
+
+            {/* Task Text */}
+            <View style={styles.taskInfo}>
               <Text
                 style={[
-                  styles.taskDescription,
+                  styles.taskTitle,
                   item.status === "completed" && styles.completedText,
                 ]}
               >
-                {item.description}
+                {item.title}
               </Text>
-            ) : null}
+
+              {item.description ? (
+                <Text
+                  style={[
+                    styles.taskDesc,
+                    item.status === "completed" && styles.completedDesc,
+                  ]}
+                >
+                  {item.description}
+                </Text>
+              ) : null}
+            </View>
           </View>
-        </View>
-      </Swipeable>
+        </Swipeable>
+      </GestureHandlerRootView>
     );
   };
 
@@ -110,11 +122,13 @@ const Dashboard = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         ListEmptyComponent={
-          <Text style={styles.emptyText}>No tasks for today. Add new tasks!</Text>
+          <Text style={styles.emptyText}>
+            No tasks for today. Add new tasks!
+          </Text>
         }
       />
 
-      {/* Floating Add Task Button */}
+      {/* Floating Add Button */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => setIsModalVisible(true)}
@@ -129,62 +143,90 @@ const Dashboard = () => {
       />
     </View>
   );
-};
+}
+
+/* ---------------------------- STYLES ---------------------------- */
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8f9fa", padding: 20 },
 
   sectionTitle: {
     fontSize: 24,
-    fontWeight: "bold",
+    fontWeight: "700",
     marginBottom: 15,
-    color: "#34495e",
+    color: "#2c3e50",
     textAlign: "center",
   },
 
-  taskItem: {
+  /* Task Card */
+  taskCard: {
     flexDirection: "row",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#fff",
     padding: 18,
-    marginVertical: 8,
     borderRadius: 16,
-    elevation: 3,
-  },
-
-  circleWrapper: {
-    marginRight: 12,
-    justifyContent: "center",
+    marginBottom: 12,
     alignItems: "center",
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: "#eaeaea",
   },
 
-  taskContent: { flex: 1 },
-
-  taskTitle: {
+  /* Checkbox */
+  checkCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2,
+    borderColor: "#007BFF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 15,
+  },
+  checkMark: {
     fontSize: 18,
     fontWeight: "bold",
+    color: "#007BFF",
+  },
+
+  /* Task Text */
+  taskInfo: { flex: 1 },
+  taskTitle: {
+    fontSize: 17,
+    fontWeight: "600",
     color: "#2c3e50",
   },
-
-  taskDescription: {
+  taskDesc: {
     fontSize: 14,
     color: "#7f8c8d",
-    marginTop: 4,
+    marginTop: 3,
   },
 
+  /* Completed Style */
   completedText: {
-    textDecorationLine: "line-through",
     color: "#95a5a6",
+    textDecorationLine: "line-through",
+  },
+  completedDesc: {
+    color: "#bdc3c7",
+    textDecorationLine: "line-through",
   },
 
+  /* Swipe Delete */
   deleteSwipe: {
     backgroundColor: "#e74c3c",
     justifyContent: "center",
     alignItems: "center",
-    width: 80,
+    width: 90,
     borderRadius: 16,
-    marginVertical: 8,
+    marginVertical: 6,
+  },
+  deleteText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
   },
 
+  /* Empty */
   emptyText: {
     textAlign: "center",
     color: "#95a5a6",
@@ -192,11 +234,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
+  /* FAB */
   fab: {
     position: "absolute",
     bottom: 30,
     right: 20,
-    backgroundColor: "#85c1e9",
+    backgroundColor: "#3498db",
     width: 64,
     height: 64,
     borderRadius: 32,
@@ -205,5 +248,3 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
 });
-
-export default Dashboard;

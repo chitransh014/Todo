@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   StyleSheet,
   Alert,
   AppState,
+  RefreshControl,
+  ScrollView
 } from "react-native";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -20,6 +22,7 @@ export default function Focus() {
   const [minutesInput, setMinutesInput] = useState("25");
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const appState = useRef(AppState.currentState);
   const lastTimestamp = useRef(Date.now());
@@ -46,6 +49,11 @@ export default function Focus() {
       console.log("Fetch task error:", err);
     }
   };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchTasks().finally(() => setRefreshing(false));
+  }, []);
 
   /* ------------------ PLAY SOUND WHEN FINISHED ------------------ */
   const playFinishSound = async () => {
@@ -151,147 +159,197 @@ export default function Focus() {
   };
 
   /* ------------------ UI ------------------ */
-  return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Focus Mode</Text>
+ return (
+  <ScrollView style={styles.container} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+    <Text style={styles.header}>Focus Mode</Text>
 
-      {/* Task Select */}
-      <Text style={styles.label}>Select Task</Text>
-
-      <View style={styles.dropdown}>
-        {tasks.length === 0 ? (
-          <Text>No active tasks</Text>
-        ) : (
-          tasks.map((t) => (
-            <TouchableOpacity
-              key={t._id}
-              style={[
-                styles.taskOption,
-                selectedTaskId === t._id && styles.taskOptionSelected,
-              ]}
-              onPress={() => setSelectedTaskId(t._id)}
-            >
-              <Text style={{ color: selectedTaskId === t._id ? "#fff" : "#333" }}>
-                {t.title}
-              </Text>
-            </TouchableOpacity>
-          ))
-        )}
-      </View>
-
-      {/* Minutes Input */}
-      <Text style={styles.label}>Enter Minutes</Text>
-      <TextInput
-        style={styles.input}
-        keyboardType="numeric"
-        value={minutesInput}
-        onChangeText={setMinutesInput}
-      />
-
-      {/* Timer */}
-      <Text style={styles.timer}>{formatTime(timeLeft)}</Text>
-
-      {/* Buttons */}
-      {!isActive ? (
-        <TouchableOpacity style={styles.startBtn} onPress={startTimer}>
-          <Ionicons name="play" size={20} color="#fff" />
-          <Text style={styles.btnText}>Start</Text>
-        </TouchableOpacity>
+    {/* Select Task */}
+    <Text style={styles.label}>Select Task</Text>
+    <View style={styles.taskContainer}>
+      {tasks.length === 0 ? (
+        <Text style={styles.noTask}>No active tasks</Text>
       ) : (
-        <TouchableOpacity style={styles.pauseBtn} onPress={pauseTimer}>
-          <Ionicons name="pause" size={20} color="#fff" />
-          <Text style={styles.btnText}>Pause</Text>
-        </TouchableOpacity>
+        tasks.map((t) => (
+          <TouchableOpacity
+            key={t._id}
+            style={[
+              styles.taskPill,
+              selectedTaskId === t._id && styles.taskPillSelected,
+            ]}
+            onPress={() => setSelectedTaskId(t._id)}
+          >
+            <Text
+              style={[
+                styles.taskPillText,
+                selectedTaskId === t._id && styles.taskPillTextSelected,
+              ]}
+            >
+              {t.title}
+            </Text>
+          </TouchableOpacity>
+        ))
       )}
-
-      <TouchableOpacity style={styles.resetBtn} onPress={resetTimer}>
-        <Ionicons name="refresh" size={20} color="#fff" />
-        <Text style={styles.btnText}>Reset</Text>
-      </TouchableOpacity>
     </View>
-  );
+
+    {/* Enter Minutes */}
+    <Text style={styles.label}>Enter Minutes</Text>
+    <TextInput
+      style={styles.input}
+      keyboardType="numeric"
+      value={minutesInput}
+      onChangeText={setMinutesInput}
+    />
+
+    {/* Circular Timer */}
+    <View style={styles.timerCircle}>
+      <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
+    </View>
+
+    {/* Buttons */}
+    {!isActive ? (
+      <TouchableOpacity style={styles.startBtn} onPress={startTimer}>
+        <Ionicons name="play" size={20} color="#fff" />
+        <Text style={styles.btnText}>Start</Text>
+      </TouchableOpacity>
+    ) : (
+      <TouchableOpacity style={styles.pauseBtn} onPress={pauseTimer}>
+        <Ionicons name="pause" size={20} color="#fff" />
+        <Text style={styles.btnText}>Pause</Text>
+      </TouchableOpacity>
+    )}
+
+    <TouchableOpacity style={styles.resetBtn} onPress={resetTimer}>
+      <Ionicons name="refresh" size={20} color="#fff" />
+      <Text style={styles.btnText}>Reset</Text>
+    </TouchableOpacity>
+  </ScrollView>
+);
+
 }
 
 /* ------------------ STYLES ------------------ */
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 25, backgroundColor: "#f8f9fa" },
+  container: {
+    flex: 1,
+    padding: 25,
+    backgroundColor: "#F5F8FF",
+  },
 
   header: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: "700",
-    textAlign: "center",
     marginBottom: 20,
-    color: "#2c3e50",
+    textAlign: "center",
+    color: "#1C3553",
   },
 
   label: {
     fontSize: 16,
     fontWeight: "600",
+    color: "#375B7F",
     marginBottom: 6,
-    color: "#34495e",
+    marginTop: 10,
   },
 
-  dropdown: {
-    marginBottom: 15,
+  /* Task Pills */
+  taskContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
+    marginBottom: 15,
   },
 
-  taskOption: {
+  taskPill: {
     paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#bbb",
-    marginRight: 8,
-    marginBottom: 8,
+    borderColor: "#B7C8D9",
+    backgroundColor: "#fff",
+    marginRight: 10,
+    marginBottom: 10,
   },
 
-  taskOptionSelected: {
+  taskPillSelected: {
     backgroundColor: "#007BFF",
     borderColor: "#007BFF",
   },
 
+  taskPillText: {
+    fontSize: 14,
+    color: "#375B7F",
+    fontWeight: "600",
+  },
+
+  taskPillTextSelected: {
+    color: "#fff",
+  },
+
+  noTask: {
+    color: "#999",
+    fontStyle: "italic",
+  },
+
+  /* Input */
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: "#C8D6E5",
     padding: 12,
     borderRadius: 10,
-    backgroundColor: "#fff",
-    marginBottom: 20,
     fontSize: 16,
+    backgroundColor: "#ffffff",
+    marginBottom: 25,
   },
 
-  timer: {
-    fontSize: 48,
-    textAlign: "center",
-    marginVertical: 25,
+  /* Timer Circle */
+  timerCircle: {
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    borderWidth: 9,
+    borderColor: "#007BFF",
+    justifyContent: "center",
+    alignItems: "center",
+    alignSelf: "center",
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
+    marginVertical: 35,
+  },
+
+  timerText: {
+    fontSize: 50,
     fontWeight: "700",
-    color: "#2c3e50",
+    color: "#1C3553",
   },
 
+  /* Start Button */
   startBtn: {
     flexDirection: "row",
     justifyContent: "center",
-    backgroundColor: "#27ae60",
+    backgroundColor: "#28C76F",
     padding: 15,
     borderRadius: 12,
     marginBottom: 12,
+    elevation: 3,
   },
 
+  /* Pause Button */
   pauseBtn: {
     flexDirection: "row",
     justifyContent: "center",
-    backgroundColor: "#e67e22",
+    backgroundColor: "#FF9F43",
     padding: 15,
     borderRadius: 12,
     marginBottom: 12,
   },
 
+  /* Reset Button */
   resetBtn: {
     flexDirection: "row",
     justifyContent: "center",
-    backgroundColor: "#3498db",
+    backgroundColor: "#007BFF",
     padding: 15,
     borderRadius: 12,
   },
@@ -303,3 +361,4 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 });
+

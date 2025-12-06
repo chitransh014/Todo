@@ -6,8 +6,9 @@ import AuthStack from './navigation/AuthStack';
 import MainTabs from './navigation/MainTabs';
 import { TaskProvider } from './context/TaskContext';
 import * as Notifications from 'expo-notifications';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-// How notifications behave when received
+// Notifications behavior
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -38,8 +39,8 @@ export default function App() {
   useEffect(() => {
     const requestPermissions = async () => {
       const { status } = await Notifications.requestPermissionsAsync();
-      if (status !== "granted") {
-        alert("Enable notifications to get reminders");
+      if (status !== 'granted') {
+        alert('Enable notifications to get reminders');
       }
     };
 
@@ -47,11 +48,12 @@ export default function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <TaskProvider>
-        <RootNavigator />
-      </TaskProvider>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <TaskProvider>
+          <RootNavigator />
+        </TaskProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }
-

@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
-  RefreshControl
+  RefreshControl,
 } from "react-native";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -13,9 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 export default function Learning() {
   const [stats, setStats] = useState(null);
-  const [weeklyData, setWeeklyData] = useState([]);
-  const [streak, setStreak] = useState(0);
-  const [refreshing, setRefreshing] = useState(false); // 🔥 NEW
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchStats();
@@ -24,52 +22,30 @@ export default function Learning() {
   const fetchStats = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
-      const response = await axios.get(`${BASE_URL}/tasks/learning/stats`, {
+      const res = await axios.get(`${BASE_URL}/tasks/learning/stats`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setStats(response.data);
-
-      const completed = response.data.recentCompleted || [];
-
-      calculateWeeklyGraph(completed);
-      calculateStreak(completed);
+      setStats(res.data);
     } catch (err) {
-      console.error("Learning stats error:", err);
+      console.error("Learning error:", err);
     }
   };
 
-  /* 🔄 Pull-to-refresh handler */
-  const onRefresh = async () => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
-    await fetchStats();
-    setTimeout(() => setRefreshing(false), 500);
+    fetchStats().finally(() => setRefreshing(false));
+  }, []);
+
+  /* FORMAT DATE */
+  const formatDate = (raw) => {
+    if (!raw) return "No date";
+    const d = new Date(raw);
+    if (isNaN(d)) return raw;
+    return d.toLocaleDateString();
   };
 
-  /* ---------- WEEKLY GRAPH ---------- */
-  const calculateWeeklyGraph = (completedTasks) => {
-    const last7 = Array(7).fill(0);
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    completedTasks.forEach((t) => {
-      if (!t.completedAt) return;
-
-      const d = new Date(t.completedAt);
-      d.setHours(0, 0, 0, 0);
-
-      const diff = Math.round(
-        (today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)
-      );
-
-      if (diff >= 0 && diff < 7) last7[6 - diff] += 1;
-    });
-
-    setWeeklyData(last7);
-  };
-
-  /* ---------- DAY LABELS ---------- */
+  /* WEEKLY DAY LABELS */
   const getDayLabels = () => {
     const labels = [];
     const today = new Date();
@@ -79,114 +55,65 @@ export default function Learning() {
       d.setDate(today.getDate() - i);
       labels.push(d.toLocaleDateString("en-US", { weekday: "short" })[0]);
     }
+
     return labels;
-  };
-
-  /* ---------- STREAK ---------- */
-  const calculateStreak = (tasks) => {
-    let streakCount = 0;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    for (let i = 0; i < 60; i++) {
-      const check = new Date(today);
-      check.setDate(today.getDate() - i);
-
-      const hasTask = tasks.some((t) => {
-        if (!t.completedAt) return false;
-        const d = new Date(t.completedAt);
-        d.setHours(0, 0, 0, 0);
-        return d.getTime() === check.getTime();
-      });
-
-      if (hasTask) streakCount++;
-      else break;
-    }
-
-    setStreak(streakCount);
-  };
-
-  /* ---------- DATE PARSER ---------- */
-  const formatTaskDate = (rawDate) => {
-    if (!rawDate) return "No date";
-    let parsed = new Date(rawDate);
-
-    if (isNaN(parsed.getTime())) {
-      const parts = rawDate.split(/[-/]/);
-      if (parts.length >= 3) {
-        parsed = new Date(`${parts[2]}-${parts[0]}-${parts[1]}`);
-      }
-    }
-
-    return isNaN(parsed.getTime())
-      ? rawDate
-      : parsed.toLocaleDateString();
   };
 
   if (!stats) return <Text style={styles.loading}>Loading...</Text>;
 
+  const { streak, weekly, recentCompleted, completedTasks, timeSpent } = stats;
   const dayLabels = getDayLabels();
 
   return (
     <FlatList
-      data={stats.recentCompleted}
+      data={recentCompleted}
       keyExtractor={(item) => item._id}
-      contentContainerStyle={{ padding: 20 }}
-      
-      /* 🔥 SWIPE-TO-REFRESH ADDED HERE */
       refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          colors={["#3498db"]}
-        />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
-
+      contentContainerStyle={{ padding: 20 }}
       ListHeaderComponent={
         <>
+          {/* Header */}
           <Text style={styles.header}>Your Learning Stats</Text>
 
-          {/* STREAK CARD */}
+          {/* Streak Card */}
           <View style={styles.streakCard}>
             <Ionicons name="flame" size={40} color="#ff6b00" />
-            <View>
+            <View style={{ marginLeft: 10 }}>
               <Text style={styles.streakNumber}>{streak} Days</Text>
               <Text style={styles.streakLabel}>Current Streak</Text>
             </View>
           </View>
 
-          {/* SUMMARY CARDS */}
-          <View style={styles.cardRow}>
-            <View style={[styles.statCard, { backgroundColor: "#3498db" }]}>
-              <Text style={styles.statValue}>{stats.completedTasks}</Text>
-              <Text style={styles.statLabel}>Completed</Text>
+          {/* Summary */}
+          <View style={styles.summaryRow}>
+            <View style={[styles.summaryCard, { backgroundColor: "#3498db" }]}>
+              <Text style={styles.summaryValue}>{completedTasks}</Text>
+              <Text style={styles.summaryLabel}>Completed</Text>
             </View>
 
-            <View style={[styles.statCard, { backgroundColor: "#1abc9c" }]}>
-              <Text style={styles.statValue}>{stats.timeSpent}h</Text>
-              <Text style={styles.statLabel}>Time Spent</Text>
+            <View style={[styles.summaryCard, { backgroundColor: "#1abc9c" }]}>
+              <Text style={styles.summaryValue}>{timeSpent}h</Text>
+              <Text style={styles.summaryLabel}>Time Spent</Text>
             </View>
           </View>
 
-          {/* WEEKLY ACTIVITY */}
+          {/* Weekly Activity Pills */}
           <Text style={styles.sectionTitle}>Weekly Activity</Text>
 
-          <View style={styles.weekRow}>
-            {weeklyData.map((count, index) => {
-              const isCompleted = count > 0;
-              return (
-                <View key={index} style={styles.weekItem}>
-                  <View
-                    style={[
-                      styles.dayCircle,
-                      isCompleted ? styles.dayFilled : styles.dayMissed,
-                    ]}
-                  />
-                  <Text style={styles.dayLabel}>{dayLabels[index]}</Text>
-                </View>
-              );
-            })}
+          <View style={styles.weeklyContainer}>
+            {weekly.map((count, i) => (
+              <View key={i} style={{ alignItems: "center" }}>
+                <View
+                  style={[
+                    styles.pill,
+                    count > 0 ? styles.pillActive : styles.pillInactive,
+                  ]}
+                />
+                <Text style={styles.pillLabel}>{dayLabels[i]}</Text>
+              </View>
+            ))}
           </View>
 
           <Text style={styles.sectionTitle}>Recently Completed</Text>
@@ -197,11 +124,8 @@ export default function Learning() {
           <Ionicons name="checkmark-circle" size={26} color="#27ae60" />
           <View style={{ marginLeft: 10 }}>
             <Text style={styles.recentTitle}>{item.title}</Text>
-
             <Text style={styles.recentDate}>
-              {formatTaskDate(
-                item.completedAt || item.updatedAt || item.createdAt
-              )}
+              {formatDate(item.completedAt || item.updatedAt)}
             </Text>
           </View>
         </View>
@@ -211,6 +135,7 @@ export default function Learning() {
 }
 
 /* ---------------------- STYLES ---------------------- */
+
 const styles = StyleSheet.create({
   loading: { marginTop: 40, textAlign: "center" },
 
@@ -218,84 +143,81 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: "700",
     textAlign: "center",
-    marginBottom: 25,
+    marginBottom: 20,
     color: "#2c3e50",
   },
 
   /* Streak Card */
   streakCard: {
     flexDirection: "row",
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 15,
     alignItems: "center",
-    marginBottom: 20,
+    padding: 18,
+    backgroundColor: "#fff",
+    borderRadius: 15,
     elevation: 2,
+    marginBottom: 20,
   },
   streakNumber: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "700",
-    marginLeft: 10,
     color: "#ff6b00",
   },
-  streakLabel: { marginLeft: 10, color: "#7f8c8d" },
+  streakLabel: { color: "#7f8c8d", marginTop: 2 },
 
   /* Summary Cards */
-  cardRow: {
+  summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 20,
+    marginBottom: 22,
   },
-  statCard: {
+  summaryCard: {
     width: "48%",
     padding: 20,
     borderRadius: 15,
   },
-  statValue: { fontSize: 28, fontWeight: "700", color: "#fff" },
-  statLabel: { color: "#fff", opacity: 0.8, marginTop: 5 },
+  summaryValue: { fontSize: 28, color: "#fff", fontWeight: "700" },
+  summaryLabel: { fontSize: 14, color: "#fff", opacity: 0.85 },
 
-  /* Weekly Tracker */
-  weekRow: {
+  /* Weekly Pills */
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    marginBottom: 12,
+    color: "#2c3e50",
+    marginTop: 10,
+  },
+  weeklyContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 15,
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    paddingHorizontal: 15,
-    marginBottom: 20,
-    elevation: 2,
+    marginBottom: 25,
+    paddingHorizontal: 10,
   },
-  weekItem: {
-    alignItems: "center",
-    width: 35,
+  pill: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    marginBottom: 6,
   },
-  dayCircle: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    marginBottom: 8,
+  pillActive: {
+    backgroundColor: "#007BFF",
   },
-  dayFilled: {
-    backgroundColor: "#3498db",
+  pillInactive: {
+    borderWidth: 1.5,
+    borderColor: "#cbd5e0",
+    backgroundColor: "#f1f2f6",
   },
-  dayMissed: {
-    backgroundColor: "#dfe6e9",
-  },
-  dayLabel: {
-    fontSize: 14,
-    color: "#34495e",
-    fontWeight: "500",
-  },
+  pillLabel: { color: "#7f8c8d", fontSize: 12 },
 
   /* Recent Items */
   recentItem: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
-    padding: 15,
+    padding: 14,
     borderRadius: 12,
+    elevation: 2,
     marginBottom: 10,
   },
-  recentTitle: { fontSize: 16, fontWeight: "600" },
-  recentDate: { color: "#7f8c8d", fontSize: 13 },
+  recentTitle: { fontSize: 16, fontWeight: "600", color: "#2c3e50" },
+  recentDate: { fontSize: 13, color: "#7f8c8d" },
 });
